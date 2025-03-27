@@ -124,6 +124,8 @@ gs = gridspec.GridSpec(nrows=2, ncols=1)  # create grid for multiple figures
 #                     bottom=bottom, wspace=wspace, hspace=hspace)
 
 ax00 = fig.add_subplot(gs[0, 0])
+ax10 = fig.add_subplot(gs[1, 0])  # , sharex=ax00
+
 ax00.plot(
     freqstamp - np.mean(freqstamp),
     NMR_decayspectrum,
@@ -203,7 +205,7 @@ ax00.quiver(
 for pos in ["right", "top", "bottom", "left"]:
     ax00.spines[pos].set_visible(True)
 
-ax10 = fig.add_subplot(gs[1, 0])
+
 ax10.plot(freqstamp, freqstamp, color="tab:orange", label="", alpha=1)
 ax10.scatter(freqstamp, freqstamp, color="tab:orange", marker="x", s=30, alpha=1)
 ax10.set_xlabel("")

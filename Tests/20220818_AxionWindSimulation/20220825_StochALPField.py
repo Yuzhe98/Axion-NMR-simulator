@@ -50,9 +50,9 @@ for ALPnuorder in [6]:
                 gyroratio=TestSample.gyroratio,  # [Hz/T]
                 init_time=0.0,  # [s]
                 station=TestStation,
-                init_magamp=1.0,
-                init_magtheta=0.0,  # [rad]
-                init_magphi=0.0,  # [rad]
+                init_mag_amp=1.0,
+                init_M_theta=0.0,  # [rad]
+                init_M_phi=0.0,  # [rad]
                 B0z=(10**ALPnuorder + 0 * 1.34)
                 / TestSample.gyroratio
                 * 2

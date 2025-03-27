@@ -29,7 +29,7 @@ from functioncache import (check, GiveDateandTime, record_runtime_YorN, \
         MovAvgByStep,
         checkDrift, clear_lines)
 
-from KeaControl import Kea
+# from KeaControl import Kea
 # basic computations
 import numpy as np
 
@@ -4546,9 +4546,9 @@ class LIASignal:
                             hspace=0.0,
                             wspace=0.25)
         real_ax = fig.add_subplot(gs[0, 0])
-        imag_ax = fig.add_subplot(gs[1, 0])
-        amp_ax = fig.add_subplot(gs[0, 1])
-        phase_ax = fig.add_subplot(gs[1, 1])
+        imag_ax = fig.add_subplot(gs[1, 0], sharex=real_ax, sharey=real_ax)
+        amp_ax = fig.add_subplot(gs[0, 1], sharex=real_ax)
+        phase_ax = fig.add_subplot(gs[1, 1], sharex=real_ax)
         real_ax.plot(self.frequencies, self.avgFFT.real, \
             label='Real part of FFT', color='tab:blue')
         real_ax.set_ylabel('Amplitude')
@@ -4779,7 +4779,7 @@ class LIASignal:
                                 hspace=0.0,
                                 wspace=0.25)
             real_ax = fig.add_subplot(gs[0, 0])
-            imag_ax = fig.add_subplot(gs[1, 0], sharex=real_ax)
+            imag_ax = fig.add_subplot(gs[1, 0], sharex=real_ax, sharey=real_ax)
             amp_ax = fig.add_subplot(gs[0, 1], sharex=real_ax)
             phase_ax = fig.add_subplot(gs[1, 1], sharex=real_ax)
             real_ax.plot(self.frequencies, self.avgFFT.real, \
@@ -5260,6 +5260,8 @@ class LIASignal:
         # plot time-series
         if showtimedomain:
             # TTL signal of pulses
+            if not hasattr(self, 'pulsedata'):
+                self.pulsedata = np.zeros(len(self.timestamp))
             pulse_ax.plot(self.timestamp, self.pulsedata, label="pulse sequence", c='tab:purple')
             pulse_ax.set_ylabel('Voltage [V]')
             pulse_ax.set_xlim(self.timestamp[0], self.timestamp[-1])
@@ -6070,52 +6072,52 @@ class SQUID:
         self.Rf = Rf
         self.attenuation = attenuation
 
-class Experiment:
+# class Experiment:
     
-    def __init__(
-        self,
-        name=None,
-        exptype = None,  # 'Not specified', 'Kea Pulsed-NMR' 'SQUID Pulsed-NMR'
-        # 'Spin Moise Measurement' 'CPMG Kea' 'CPMG SQUID'
-        dateandtime = None,
-        ):
-        self.name = name
-        self.exptype = exptype
-        self.dateandtime = dateandtime
-    # There is not always a Expinfo in the data file, therefore it may not always work
-    # TODO: replace it with some other functions
-    #print("I will check the file "+allDMfiles[index]+" for the measurement time")
-    Keadevice = Kea(name='blank')
-    SQDsensor = SQUID(name=SQUIDname,  # 'Channel 1, S0217' 'Channel 3, S0132'
-                    Mf = SQUID_Mf,
-                    Rf = SQUID_Rf,
-                    attenuation = attenuation,)
-    Expinfo = Experiment(
-            name = 'LIA NoPulse Recording',
-            exptype = 'Exper Type Not specified',
-            dateandtime = GiveDateandTime(),)
-    liastream = LIASignal(
-                    name='LIA data',
-                    device='LIA',
-                    device_id='dev4434',
-                    file=filelist[index],
-                    verbose=False)
-    liastream.LoadStream(
-        Keadevice=Keadevice,
-        SQDsensor=SQDsensor,
-        Expinfo=Expinfo,
-        verbose=False)
+#     def __init__(
+#         self,
+#         name=None,
+#         exptype = None,  # 'Not specified', 'Kea Pulsed-NMR' 'SQUID Pulsed-NMR'
+#         # 'Spin Moise Measurement' 'CPMG Kea' 'CPMG SQUID'
+#         dateandtime = None,
+#         ):
+#         self.name = name
+#         self.exptype = exptype
+#         self.dateandtime = dateandtime
+#     # There is not always a Expinfo in the data file, therefore it may not always work
+#     # TODO: replace it with some other functions
+#     #print("I will check the file "+allDMfiles[index]+" for the measurement time")
+#     Keadevice = Kea(name='blank')
+#     SQDsensor = SQUID(name=SQUIDname,  # 'Channel 1, S0217' 'Channel 3, S0132'
+#                     Mf = SQUID_Mf,
+#                     Rf = SQUID_Rf,
+#                     attenuation = attenuation,)
+#     Expinfo = Experiment(
+#             name = 'LIA NoPulse Recording',
+#             exptype = 'Exper Type Not specified',
+#             dateandtime = GiveDateandTime(),)
+#     liastream = LIASignal(
+#                     name='LIA data',
+#                     device='LIA',
+#                     device_id='dev4434',
+#                     file=filelist[index],
+#                     verbose=False)
+#     liastream.LoadStream(
+#         Keadevice=Keadevice,
+#         SQDsensor=SQDsensor,
+#         Expinfo=Expinfo,
+#         verbose=False)
     
-    dateandtime = str(Expinfo.dateandtime.decode('utf-8'))
+#     dateandtime = str(Expinfo.dateandtime.decode('utf-8'))
 
-    year = int(dateandtime[:4])
-    month = int(dateandtime[4:6])
-    day = int(dateandtime[6:8])
-    hour = dateandtime[9:11]
-    minute = dateandtime[11:13]
-    second = dateandtime[13:]
+#     year = int(dateandtime[:4])
+#     month = int(dateandtime[4:6])
+#     day = int(dateandtime[6:8])
+#     hour = dateandtime[9:11]
+#     minute = dateandtime[11:13]
+#     second = dateandtime[13:]
 
-    date_time_int = math.floor(float(f"{hour}{minute}{second}"))
-    date_time_str = f"{hour}:{minute}:{second}"
+#     date_time_int = math.floor(float(f"{hour}{minute}{second}"))
+#     date_time_str = f"{hour}:{minute}:{second}"
 
-    return year, month, day, date_time_str, date_time_int
+#     return year, month, day, date_time_str, date_time_int

@@ -7,27 +7,24 @@ import numpy as np
 # import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from matplotlib.collections import PolyCollection
+
+# from matplotlib.collections import PolyCollection
 import matplotlib.ticker as mticker
 
 # from numpy.core.fromnumeric import shape, transpose
 
-# from scipy.fftpack import fft, ifft
-# import scipy.optimize
-# import h5py
-# import time
-# from uncertainties import ufloat
 import numba as nb
 from math import sin, cos, sqrt
 from scipy.stats import maxwell, rayleigh, uniform, norm, chi2, gamma
 
-# import random
 import h5py
 
+from DataAnalysis import LIASignal
 
-def TTL(x: float, start: float, stop: float) -> float:
+
+def TTL(x: float | np.ndarray, start: float, stop: float) -> float:
     """
-    Returns 1 if 0 <= x <= 0.5, else returns 0.
+    Returns 1 if start <= x <= stop, else returns 0.
 
     Parameters:
     x : float or array-like
@@ -35,9 +32,13 @@ def TTL(x: float, start: float, stop: float) -> float:
 
     Returns:
     float or array-like
-        1 if 0 <= x <= 0.5, else 0.
+        1 if start <= x <= stop, else 0.
     """
-    return (start <= x) & (x <= stop)
+    # if (start <= x) & (x <= stop):
+    #     return 1.0
+    # else:
+    #     return 0
+    return np.where((start <= x) & (x <= stop), 1.0, 0.0)
 
 
 class Sample:
@@ -318,21 +319,68 @@ class MagField:
     #     )
     #     self.nu = nu_e
 
-    def setSinPulseExcitation(
+    def setPulse(
         self,
         timeStamp,
         B1,  # amplitude of the excitation pulse in [T]
-        nu_e,
+        nu_rot,
         init_phase,
+        direction: np.ndarray,  #  = np.array([1, 0, 0])
         duty_func,
         verbose: bool = False,
     ):
-        self.excField = (
-            duty_func(timeStamp)
-            * B1
-            * np.sin(2 * np.pi * nu_e * timeStamp + init_phase)
+        """
+        generate the pulse in the rotating frame
+        """
+        # B_envelope = (
+        #     duty_func(timeStamp)
+        #     * 1.0
+        #     / 2
+        #     * B1
+        #     * np.cos(2 * np.pi * nu_rot * timeStamp + init_phase)
+        # )
+        Bx_envelope = 1.0 / 2 * B1 * duty_func(timeStamp)
+        Bx_envelope = np.multiply(
+            Bx_envelope, np.cos(2 * np.pi * nu_rot * timeStamp + init_phase)
         )
-        self.nu = nu_e
+        Bx = np.outer(Bx_envelope, np.array([1, 0, 0]))
+
+        By_envelope = 1.0 / 2 * B1 * duty_func(timeStamp)
+        By_envelope = np.multiply(
+            By_envelope, np.sin(2 * np.pi * nu_rot * timeStamp + init_phase)
+        )
+        By = np.outer(By_envelope, np.array([0, 1, 0]))
+
+        dBxdt_envelope = 1.0 / 2 * B1 * duty_func(timeStamp)
+        dBxdt_envelope = np.multiply(
+            dBxdt_envelope,
+            -2 * np.pi * nu_rot * np.sin(2 * np.pi * nu_rot * timeStamp + init_phase),
+        )
+        dBxdt = np.outer(dBxdt_envelope, np.array([1, 0, 0]))
+
+        dBydt_envelope = 1.0 / 2 * B1 * duty_func(timeStamp)
+        dBydt_envelope = np.multiply(
+            dBydt_envelope,
+            2 * np.pi * nu_rot * np.cos(2 * np.pi * nu_rot * timeStamp + init_phase),
+        )
+        dBydt = np.outer(dBydt_envelope, np.array([0, 1, 0]))
+
+        # dBdt_envelope = (
+        #     -1.0
+        #     / 2
+        #     * B1
+        #     * 2
+        #     * np.pi
+        #     * nu_rot
+        #     * np.sin(2 * np.pi * nu_rot * timeStamp + init_phase)
+        # )
+        # dBdt_envelope = np.multiply(dBdt_envelope, duty_func(timeStamp))
+
+        self.B_vec = Bx + By
+        self.dBdt_vec = np.outer(dBxdt + dBydt, direction)
+        # self.nu = nu_rot
+        # def envelope(timeStamp):
+        #     return duty_func(timeStamp) * B1 * np.sin(2 * np.pi * nu_e * timeStamp + init_phase)
         # return
 
     def setALP_Field(
@@ -355,12 +403,14 @@ class Simulation:
         sample: Sample = None,  # class Sample
         station=None,  # refer to class Station
         init_time=0.0,  # [s]. When at time = 0, the ALP wind comes in the direction of (theta, phi) = (90°+23°26′, 0)
-        init_magamp=1,  # initial magnetization vector amplitude
-        init_magtheta=0.0,  # [rad]
-        init_magphi=0.0,  # [rad]
+        init_mag_amp=1,  # initial magnetization vector amplitude
+        init_M_theta=0.0,  # [rad]
+        init_M_phi=0.0,  # [rad]
         init_phase=0.0 * np.pi / 180,  # [rad]
+        demodfreq: float = 1e6,
         B0z=0.0,  # [T]  B0 in the laboratory frame.
         simuRate=1e6,  # simulation rate in [Hz]. simulation step = 1 / simurate
+        duration: float = 1,
         excField=None,  # class AxionWind
         verbose=True,
     ):
@@ -375,9 +425,9 @@ class Simulation:
 
         self.init_time = init_time
 
-        self.init_magamp = init_magamp
-        self.init_magtheta = init_magtheta
-        self.init_magphi = init_magphi
+        self.init_M_amp = init_mag_amp
+        self.init_M_theta = init_M_theta
+        self.init_M_phi = init_M_phi
 
         self.init_phase = init_phase
         self.B0z = B0z
@@ -385,12 +435,17 @@ class Simulation:
         self.timeStep = (
             1.0 / self.simuRate
         )  # the key parameter in setting simulation timing
-        self.excField = excField
+        self.duration = duration
+        self.timeStamp = np.arange(int(self.duration * self.simuRate)) * self.timeStep
+        # self.timestamp_t
+        self.numOfSimuSteps: int = len(self.timeStamp) - 1
+
+        self.excField: MagField = excField
         # self.simutimestep = self.simustep * self.ALPwind.cohT
         # self.simutimerate = 1.0 / self.simutimestep
-
-        self.nu_rot = abs(self.excField.nu) - abs(
-            self.sample.gyroratio * self.B0z / (2 * np.pi)
+        self.demodfreq = demodfreq
+        self.nu_rot = (
+            abs(self.sample.gyroratio * self.B0z / (2 * np.pi)) - self.demodfreq
         )  # frequency difference between the excitation field and the Larmor frequency
         # nu_rot is the Larmor frequency of the magnetization in the rotating frame
 
@@ -404,29 +459,27 @@ class Simulation:
             print("WARNING: self.simurate < 10*self.nu_rot")
             check(self.simuRate)
             check(self.nu_rot)
-        if self.simuRate < 10 * abs(
-            self.sample.gyroratio * self.excField.BALP / (2 * np.pi)
-        ):
-            print(
-                "WARNING: self.simurate < 10 * abs(self.gyroratio*self.BALP/(2*np.pi))"
-            )
+
+        # move it somewhere later
+        # if self.simuRate < 10 * abs(
+        #     self.sample.gyroratio * self.excField.BALP / (2 * np.pi)
+        # ):
+        #     print(
+        #         "WARNING: self.simurate < 10 * abs(self.gyroratio*self.BALP/(2*np.pi))"
+        #     )
 
         # self.va = 300 * 1e3
 
         if verbose:
-            print(
-                f"Nuclear resonate frequency: {self.B0z*self.sample.gyroratio/(2*np.pi):e} Hz"
-            )
+            print(f"Larmor frequency: {self.B0z*self.sample.gyroratio/(2*np.pi):e} Hz")
             print(f"ALP compton frequency: {self.excField.nu:e} Hz")
             print(f"simulation rate: {self.simuRate:e} Hz")
 
         if abs(
             self.B0z * self.sample.gyroratio / (2 * np.pi) - self.excField.nu
         ) / self.excField.nu > 20 * 10 ** (-6):
-            print("WARNING: NMR frequency is >20 ppm away from axion frequency")
-            print(
-                f"Nuclear resonate frequency: {self.B0z*self.sample.gyroratio/(2*np.pi):e} Hz"
-            )
+            print("WARNING: NMR frequency is > 20 ppm away from excitation frequency")
+            print(f"Larmor frequency: {self.B0z*self.sample.gyroratio/(2*np.pi):e} Hz")
             print(f"ALP compton frequency: {self.excField.nu:e} Hz")
         if self.T2 > self.T1:
             print("WARNING: T2 is larger than T1")
@@ -507,10 +560,10 @@ class Simulation:
                     [Bx, By, Bz, phase0].copy()
                 )  # self.BALP_array [Bx, By, Bz, phase0]
         del BALPamp_array, theta_array, phi_array, phase0_array
-        self.BALP_array = np.array(BALP_list)  # self.BALP_array [Bx, By, Bz, phase0]
-        self.dBALPdt_array = np.zeros(self.BALP_array.shape)
+        self.Bexc_t_vec = np.array(BALP_list)  # self.BALP_array [Bx, By, Bz, phase0]
+        self.dBexc_dt_vec = np.zeros(self.Bexc_t_vec.shape)
         # check(self.BALP_array)
-        self.timestamp = np.arange(len(self.BALP_array) + 1) * self.timeStep
+        self.timeStamp = np.arange(len(self.Bexc_t_vec) + 1) * self.timeStep
 
     @nb.jit(
         [
@@ -695,8 +748,8 @@ class Simulation:
         )
 
         # check(numofsimustep)
-        self.BALP_array = np.zeros((numofsimustep, 3))
-        self.dBALPdt_array = np.zeros((numofsimustep, 3))
+        self.Bexc_t_vec = np.zeros((numofsimustep, 3))
+        self.dBexc_dt_vec = np.zeros((numofsimustep, 3))
         # loop
         if usenumba:
             # check(nb.typeof(numofsimustep))
@@ -739,8 +792,8 @@ class Simulation:
                 ALP_nu_rot=ALP_nu_rot_arr,  # float[:]
                 ALP_phase=ALP_phase,  # float[:]
                 ALP_vtova_arr=self.speedtova,  # float[:]
-                BALP_arr=self.BALP_array,  # float[:,:]
-                dBALPdt_arr=self.dBALPdt_array,  # float[:,:]
+                BALP_arr=self.Bexc_t_vec,  # float[:,:]
+                dBALPdt_arr=self.dBexc_dt_vec,  # float[:,:]
                 ALPwind_direction_earth=self.excField.direction_earth,  # float[:]
                 init_time=self.init_time,  # float
                 simustep=self.timeStep,  # float
@@ -795,20 +848,20 @@ class Simulation:
                     verbose=False,
                 )
                 Bx, By, Bz = BALP * direction_lab
-                self.BALP_array[i] = [Bx, By, Bz, phase0]
+                self.Bexc_t_vec[i] = [Bx, By, Bz, phase0]
                 # BALP_modu_list.append(direction_lab)
                 # toc = time.perf_counter()
                 # newBALP_generation += toc-tic
         # looptime = newphase_generation + newBALP_generation
         # if verbose:
         #     check(newphase_generation/looptime)
-        self.timestamp = np.arange(len(self.BALP_array)) * self.timeStep
+        self.timeStamp = np.arange(len(self.Bexc_t_vec)) * self.timeStep
         check(self.excField.BALP * abs(self.sample.gyroratio))
         # check(self.BALP_array[:, 0])
         self.BALPsq_arr = (
-            self.BALP_array[:, 0] ** 2
-            + self.BALP_array[:, 1] ** 2
-            + self.BALP_array[:, 2] ** 2
+            self.Bexc_t_vec[:, 0] ** 2
+            + self.Bexc_t_vec[:, 1] ** 2
+            + self.Bexc_t_vec[:, 2] ** 2
         )
         check(np.mean(np.sqrt(self.BALPsq_arr)) * abs(self.sample.gyroratio))
         check(np.sqrt(np.mean(self.BALPsq_arr)) * abs(self.sample.gyroratio))
@@ -819,11 +872,11 @@ class Simulation:
             #                     bottom=bottom_spc, wspace=xgrid_spc, hspace=ygrid_spc)
             ax = fig.add_subplot(gs[0, 0])
             ax.plot(
-                self.timestamp,
-                2 * self.BALP_array[:, 0] / self.excField.BALP,
+                self.timeStamp,
+                2 * self.Bexc_t_vec[:, 0] / self.excField.BALP,
                 color="tab:brown",
             )
-            ax.set_xlabel("time / s")
+            ax.set_xlabel("time [s]")
             ax.set_ylabel("$B_{a,t} / B_{a} $")
             plt.tight_layout()
             plt.show()
@@ -884,8 +937,8 @@ class Simulation:
             check(numofsimustep)
         BALP_list = []
         BALP_modu_list = []
-        newphase_generation = 0
-        newBALP_generation = 0
+        # newphase_generation = 0
+        # newBALP_generation = 0
         # loop
         for i in range(numofsimustep):
             # if verbose and i%10000 == 0:
@@ -910,9 +963,9 @@ class Simulation:
         # looptime = newphase_generation + newBALP_generation
         # if verbose:
         #     check(newphase_generation/looptime)
-        self.BALP_array = np.array(BALP_list)  # [Bx, By, Bz, phase0]
+        self.Bexc_t_vec = np.array(BALP_list)  # [Bx, By, Bz, phase0]
         self.BALP_modu_array = np.array(BALP_modu_list) * self.excField.BALP
-        self.timestamp = np.arange(len(self.BALP_array)) * self.timeStep
+        self.timeStamp = np.arange(len(self.Bexc_t_vec)) * self.timeStep
 
     def GenerateParam(
         self,
@@ -981,7 +1034,7 @@ class Simulation:
         if excType not in self.method_dict.keys():
             raise KeyError("method not in self.method_dict.keys()")
         else:
-            self.method = excType
+            self.excType = excType
 
         self.method_dict[excType](
             self,
@@ -1008,25 +1061,25 @@ class Simulation:
             # BALPamp_ax.plot(self.timestamp[0:-1:plotintv], self.BALP_array[0:-1:plotintv, 3], label='$B_{ALP}$', color='tab:red', alpha=0.9)
             # BALPamp_ax.legend(loc='upper right')
             # BALPamp_ax.set_ylabel('ALP B field / T')
-            # BALPamp_ax.set_xlabel('Time / s')
+            # BALPamp_ax.set_xlabel('time [s]')
 
             BALPxyz_ax = fig.add_subplot(gs[0, 0])
             BALPxyz_ax.plot(
-                self.timestamp[0:-1:plotintv],
+                self.timeStamp[0:-1:plotintv],
                 self.BALP_modu_array[0:-1:plotintv, 0],
                 label="ALP $B_{x}$",
                 color="tab:blue",
                 alpha=0.7,
             )  # self.BALP_array[0:-1:plotintv, 0]
             BALPxyz_ax.plot(
-                self.timestamp[0:-1:plotintv],
+                self.timeStamp[0:-1:plotintv],
                 self.BALP_modu_array[0:-1:plotintv, 1],
                 label="ALP $B_{y}$",
                 color="tab:orange",
                 alpha=0.7,
             )
             BALPxyz_ax.plot(
-                self.timestamp[0:-1:plotintv],
+                self.timeStamp[0:-1:plotintv],
                 self.BALP_modu_array[0:-1:plotintv, 2],
                 label="ALP $B_{z}$",
                 color="tab:green",
@@ -1059,26 +1112,26 @@ class Simulation:
             # BALPamp_ax.plot(self.timestamp[0:-1:plotintv], self.BALP_array[0:-1:plotintv, 3], label='$B_{ALP}$', color='tab:red', alpha=0.9)
             # BALPamp_ax.legend(loc='upper right')
             # BALPamp_ax.set_ylabel('ALP B field / T')
-            # BALPamp_ax.set_xlabel('Time / s')
+            # BALPamp_ax.set_xlabel('time [s]')
 
             BALPxyz_ax = fig.add_subplot(gs[0, 0])
             BALPxyz_ax.plot(
-                self.timestamp[0:-1:plotintv],
-                self.BALP_array[0:-1:plotintv, 0],
+                self.timeStamp[0:-1:plotintv],
+                self.Bexc_t_vec[0:-1:plotintv, 0],
                 label="ALP $B_{x}$",
                 color="tab:blue",
                 alpha=0.7,
             )  # self.BALP_array[0:-1:plotintv, 0]
             BALPxyz_ax.plot(
-                self.timestamp[0:-1:plotintv],
-                self.BALP_array[0:-1:plotintv, 1],
+                self.timeStamp[0:-1:plotintv],
+                self.Bexc_t_vec[0:-1:plotintv, 1],
                 label="ALP $B_{y}$",
                 color="tab:orange",
                 alpha=0.7,
             )
             BALPxyz_ax.plot(
-                self.timestamp[0:-1:plotintv],
-                self.BALP_array[0:-1:plotintv, 2],
+                self.timeStamp[0:-1:plotintv],
+                self.Bexc_t_vec[0:-1:plotintv, 2],
                 label="ALP $B_{z}$",
                 color="tab:green",
                 alpha=0.7,
@@ -1091,8 +1144,8 @@ class Simulation:
 
             BALPphase0_ax = fig.add_subplot(gs[0, 1])
             BALPphase0_ax.plot(
-                self.timestamp[0:-1:plotintv],
-                self.BALP_array[0:-1:plotintv, 3],
+                self.timeStamp[0:-1:plotintv],
+                self.Bexc_t_vec[0:-1:plotintv, 3],
                 label="ALP $\Phi_{0}$",
                 color="tab:cyan",
                 alpha=1.0,
@@ -1108,6 +1161,31 @@ class Simulation:
             plt.tight_layout()
             plt.show()
 
+    def generatePulseExcitation(
+        self,
+        pulseDur: float = 100e-6,
+        tipAngle: float = np.pi / 2,
+        direction: np.ndarray = np.array([1, 0, 0]),
+        showplt: bool = False,  # whether to plot B_ALP
+        plotrate: float = None,
+        verbose: bool = False,
+    ):
+        self.excType = "pulse"
+        B1 = 2 * tipAngle / (self.sample.gyroratio * pulseDur)
+        duty_func = partial(TTL, start=0, stop=pulseDur)
+
+        self.excField.setPulse(
+            timeStamp=self.timeStamp,
+            B1=B1,  # amplitude of the excitation pulse in [T]
+            nu_rot=self.excField.nu - self.demodfreq,  # Hz
+            init_phase=0,
+            direction=direction,
+            duty_func=duty_func,
+            verbose=False,
+        )
+
+        # check(duty_func(pulseDur / 2))
+
     # @nb.jit
     @nb.jit(
         [
@@ -1118,14 +1196,14 @@ class Simulation:
         nopython=True,
     )
     def GenerateTrajectoryLoop(
-        BALP_array,
-        dBALPdt_array,
+        B_t,
+        dBdt,
         Mx,
         My,
         Mz,
         nu_rot,
         gyroratio,
-        timestep,
+        timeStep,
         M0inf,
         T2,
         T1,
@@ -1134,11 +1212,11 @@ class Simulation:
         McrossB,
         d2Mdt2,
     ):
-        for i, BALP in enumerate(BALP_array):  # self.BALP_array [Bx, By, Bz, phase0]
-            [Bx, By, Bz] = BALP[
+        for i, Bexc in enumerate(B_t):  # self.BALP_array [Bx, By, Bz, phase0]
+            [Bx, By, Bz] = Bexc[
                 0:3
             ]  # *np.cos(2*np.pi * nu_rot * (i) * timestep + BALP[-1])
-            [dBxdt, dBydt, dBzdt] = dBALPdt_array[i][
+            [dBxdt, dBydt, dBzdt] = dBdt[i][
                 0:3
             ]  # (-1.0)*BALP[0:3] * 2*np.pi * nu_rot * np.sin(2*np.pi * nu_rot * (i) * timestep + BALP[-1])
             # if i == 0 :
@@ -1163,9 +1241,9 @@ class Simulation:
                 - dMzdt / T1
             )
 
-            Mx1 = Mx + dMxdt * timestep + d2Mxdt2 / 2.0 * timestep**2
-            My1 = My + dMydt * timestep + d2Mydt2 / 2.0 * timestep**2
-            Mz1 = Mz + dMzdt * timestep + d2Mzdt2 / 2.0 * timestep**2
+            Mx1 = Mx + dMxdt * timeStep + d2Mxdt2 / 2.0 * timeStep**2
+            My1 = My + dMydt * timeStep + d2Mydt2 / 2.0 * timeStep**2
+            Mz1 = Mz + dMzdt * timeStep + d2Mzdt2 / 2.0 * timeStep**2
 
             trjry[i + 1] = [Mx1, My1, Mz1]
             dMdt[i] = [dMxdt, dMydt, dMzdt]
@@ -1178,19 +1256,15 @@ class Simulation:
         Generate trajectory of magnetization vector in Cartesian coordinate system
         based on kinetic simulation for Bloch equations.
         """
-        self.trjry = np.zeros((len(self.BALP_array) + 1, 3))
-        self.dMdt = np.zeros((len(self.BALP_array), 3))
-        self.McrossB = np.zeros((len(self.BALP_array), 3))
-        self.d2Mdt2 = np.zeros((len(self.BALP_array), 3))
+        self.trjry = np.zeros((len(self.excField.B_vec) + 1, 3))
+        self.dMdt = np.zeros((len(self.excField.B_vec), 3))
+        self.McrossB = np.zeros((len(self.excField.B_vec), 3))
+        self.d2Mdt2 = np.zeros((len(self.excField.B_vec), 3))
         [Mx, My, Mz] = np.array(
             [
-                self.init_magamp
-                * np.sin(self.init_magtheta)
-                * np.cos(self.init_magphi),
-                self.init_magamp
-                * np.sin(self.init_magtheta)
-                * np.sin(self.init_magphi),
-                self.init_magamp * np.cos(self.init_magtheta),
+                self.init_M_amp * np.sin(self.init_M_theta) * np.cos(self.init_M_phi),
+                self.init_M_amp * np.sin(self.init_M_theta) * np.sin(self.init_M_phi),
+                self.init_M_amp * np.cos(self.init_M_theta),
             ]
         )
         vecM0 = np.array([Mx, My, Mz])
@@ -1198,33 +1272,37 @@ class Simulation:
         # check(M0inf)
         self.trjry[0] = vecM0
         # check(self.gyroratio*self.B0z/(2*np.pi) - self.ALPwind.nu)
-        timestep = self.timeStep
+        timeStep = self.timeStep
         gyroratio = self.sample.gyroratio
+        B0z_rot_amp = self.B0z - self.demodfreq / (self.sample.gyroratio / (2 * np.pi))
+        B0z_rot = B0z_rot_amp * np.ones(len(self.excField.B_vec))
+        B0_rot = np.outer(B0z_rot, np.array([0, 0, 1]))
         if usenumba:
-            # check(nb.typeof(self.BALP_array))
-            # check(nb.typeof(Mx))
-            # check(nb.typeof(My))
-            # check(nb.typeof(Mz))
-            # check(nb.typeof(self.nu_rot))
-            # check(nb.typeof(self.sample.gyroratio))
-            # check(nb.typeof(self.simustep))
-            # check(nb.typeof(M0inf))
-            # check(nb.typeof(self.T2))
-            # check(nb.typeof(self.T1))
-            # check(nb.typeof(self.trjry))
-            # check(nb.typeof(self.dMdt))
-            # check(nb.typeof(self.McrossB))
-            # check(nb.typeof(self.d2Mdt2))
-
+            """
+            check(nb.typeof(self.BALP_array))
+            check(nb.typeof(Mx))
+            check(nb.typeof(My))
+            check(nb.typeof(Mz))
+            check(nb.typeof(self.nu_rot))
+            check(nb.typeof(self.sample.gyroratio))
+            check(nb.typeof(self.simustep))
+            check(nb.typeof(M0inf))
+            check(nb.typeof(self.T2))
+            check(nb.typeof(self.T1))
+            check(nb.typeof(self.trjry))
+            check(nb.typeof(self.dMdt))
+            check(nb.typeof(self.McrossB))
+            check(nb.typeof(self.d2Mdt2))
+            """
             Simulation.GenerateTrajectoryLoop(
-                BALP_array=self.BALP_array,
-                dBALPdt_array=self.dBALPdt_array,
+                B_t=self.excField.B_vec + B0_rot,
+                dBdt=self.excField.dBdt_vec,
                 Mx=Mx,
                 My=My,
                 Mz=Mz,
                 nu_rot=self.nu_rot,
                 gyroratio=self.sample.gyroratio,
-                timestep=self.timeStep,
+                timeStep=self.timeStep,
                 M0inf=M0inf,
                 T2=self.T2,
                 T1=self.T1,
@@ -1235,10 +1313,10 @@ class Simulation:
             )
         else:
             for i, BALP in enumerate(
-                self.BALP_array
+                self.excField.B_vec
             ):  # self.BALP_array [Bx, By, Bz, phase0]
                 [Bx, By, Bz] = BALP[0:3] * np.cos(
-                    2 * np.pi * self.nu_rot * (i) * timestep + BALP[-1]
+                    2 * np.pi * self.nu_rot * (i) * timeStep + BALP[-1]
                 )
                 [dBxdt, dBydt, dBzdt] = (
                     (-1.0)
@@ -1246,7 +1324,7 @@ class Simulation:
                     * 2
                     * np.pi
                     * self.nu_rot
-                    * np.sin(2 * np.pi * self.nu_rot * (i) * timestep + BALP[-1])
+                    * np.sin(2 * np.pi * self.nu_rot * (i) * timeStep + BALP[-1])
                 )
                 # if i == 0 :
                 #     check(BALP)
@@ -1270,9 +1348,9 @@ class Simulation:
                     - dMzdt / self.T1
                 )
 
-                Mx1 = Mx + dMxdt * timestep + d2Mxdt2 / 2.0 * timestep**2
-                My1 = My + dMydt * timestep + d2Mydt2 / 2.0 * timestep**2
-                Mz1 = Mz + dMzdt * timestep + d2Mzdt2 / 2.0 * timestep**2
+                Mx1 = Mx + dMxdt * timeStep + d2Mxdt2 / 2.0 * timeStep**2
+                My1 = My + dMydt * timeStep + d2Mydt2 / 2.0 * timeStep**2
+                Mz1 = Mz + dMzdt * timeStep + d2Mzdt2 / 2.0 * timeStep**2
 
                 self.trjry[i + 1] = [Mx1, My1, Mz1]
                 self.dMdt[i] = [dMxdt, dMydt, dMzdt]
@@ -1311,12 +1389,12 @@ class Simulation:
         self.trjry_visual = self.trjry.copy()
 
         BALP_array_step = np.concatenate(
-            (self.BALP_array, [self.BALP_array[-1]]), axis=0
+            (self.excField.B_vec, [self.excField.B_vec[-1]]), axis=0
         )
         timestamp_step = np.concatenate(
             (
-                self.timestamp,
-                [self.timestamp[-1] + self.timestamp[-1] - self.timestamp[-2]],
+                self.timeStamp,
+                [self.timeStamp[-1] + self.timeStamp[-1] - self.timeStamp[-2]],
             ),
             axis=0,
         )
@@ -1326,72 +1404,68 @@ class Simulation:
             wspace=0.1, hspace=0.01
         )
         BALPamp_ax = fig.add_subplot(gs[0, 0])
-        # BALPamp_ax.plot(timestamp_step[0:-1:plotintv], BALP_array_step[0:-1:plotintv, 0], where='post', label='ALP $B_{x}$', color='tab:blue', alpha=0.7)  # self.BALP_array[0:-1:plotintv, 0]
-        # BALPamp_ax.plot(timestamp_step[0:-1:plotintv], BALP_array_step[0:-1:plotintv, 1], where='post', label='ALP $B_{y}$', color='tab:orange', alpha=0.7)
-        # BALPamp_ax.plot(timestamp_step[0:-1:plotintv], BALP_array_step[0:-1:plotintv, 2], where='post', label='ALP $B_{z}$', color='tab:green', alpha=0.7)
+        Mxy_ax = fig.add_subplot(gs[0, 1], sharex=BALPamp_ax)
+        Mz_ax = fig.add_subplot(gs[1, 1], sharex=BALPamp_ax)
+        dMxydt_ax = fig.add_subplot(gs[0, 2], sharex=BALPamp_ax)
+        dMzdt_ax = fig.add_subplot(gs[1, 2], sharex=BALPamp_ax)
+        d2Mxydt_ax = fig.add_subplot(gs[0, 3], sharex=BALPamp_ax)
+        d2Mzdt_ax = fig.add_subplot(gs[1, 3], sharex=BALPamp_ax)
 
-        if self.method == "RandomJump":
+        if self.excType == "RandomJump":
             lastnum = -2
         else:
             lastnum = -1
         BALPamp_ax.plot(
             timestamp_step[0:lastnum:plotintv],
             BALP_array_step[0:-1:plotintv, 0],
-            label="ALP $B_{x}$",
+            label="$B_{x}$",
             color="tab:blue",
             alpha=0.7,
         )  # self.BALP_array[0:-1:plotintv, 0]
         BALPamp_ax.plot(
             timestamp_step[0:lastnum:plotintv],
             BALP_array_step[0:-1:plotintv, 1],
-            label="ALP $B_{y}$",
+            label="$B_{y}$",
             color="tab:orange",
             alpha=0.7,
         )
         BALPamp_ax.plot(
             timestamp_step[0:lastnum:plotintv],
             BALP_array_step[0:-1:plotintv, 2],
-            label="ALP $B_{z}$",
+            label="$B_{z}$",
             color="tab:green",
             alpha=0.7,
         )
 
-        BALPamp_ax.set_ylabel("BALP / T")
-        BALPamp_ax.set_xlabel("time / s")
+        BALPamp_ax.set_ylabel("Magnetic field [T]")  # $B_\\mathrm{exc}$
+        BALPamp_ax.set_xlabel("time [s]")
         BALPamp_ax.legend(loc="upper right")
-
-        # BALPangle_ax = fig.add_subplot(gs[1,0])
-        # # BALPangle_ax.step(timestamp_step[0:-1:plotintv], BALP_array_step[0:-1:plotintv, 3]/np.pi, where='post', label='ALP phase0', color='tab:red', alpha=0.9)
-        # BALPangle_ax.plot(timestamp_step[0:lastnum:plotintv], BALP_array_step[0:-1:plotintv, 3]/np.pi, label='ALP phase0', color='tab:red', alpha=0.9)
-        # BALPangle_ax.legend(loc='upper right')
-        # BALPangle_ax.set_yticks((-1, 0, 1))
-        # BALPangle_ax.set_yticklabels(['-π', '0', 'π'])
-        # BALPangle_ax.set_xlabel('time / s')
 
         Mtabs = np.sqrt(
             self.trjry[0:-1:plotintv, 0] ** 2 + self.trjry[0:-1:plotintv, 1] ** 2
         )
-        Mxy_ax = fig.add_subplot(gs[0, 1])
+
         Mxy_ax.plot(
             timestamp_step[0:lastnum:plotintv],
             self.trjry[0:-1:plotintv, 0],
-            label="Mx",
+            label="$M_x$",
             color="tab:purple",
-            alpha=0.7,
+            alpha=1,
         )
         Mxy_ax.plot(
             timestamp_step[0:lastnum:plotintv],
             self.trjry[0:-1:plotintv, 1],
-            label="My",
+            label="$M_y$",
             color="tab:brown",
-            alpha=0.7,
+            alpha=1,
         )
         Mxy_ax.plot(
             timestamp_step[0:lastnum:plotintv],
             Mtabs,
-            label="|Mt|",
+            label="$|M_\\mathrm{transverse}|$",
             color="tab:orange",
             alpha=0.7,
+            linestyle="--",
         )
         # Mxy_ax.plot(timestamp_step[0:-1:plotintv], 1, \
         #     label='prediction for |Mt|', color='tab:green', alpha=0.7)
@@ -1399,53 +1473,50 @@ class Simulation:
         # np.savetxt(f'\\\\desktop-3ge6tor/d/Yu0702/casper-gradient-code/Supplementary/20220430 Scan Strategy/Mtabs_T2s_{self.T2}.txt', Mtabs)
 
         Mxy_ax.legend(loc="upper right")
-        Mxy_ax.set_xlabel("time / s")
+        Mxy_ax.set_xlabel("time [s]")
         Mxy_ax.set_ylabel("")
         Mxy_ax.grid()
 
-        Mz_ax = fig.add_subplot(gs[1, 1])
         Mz_ax.plot(
             timestamp_step[0:lastnum:plotintv],
             self.trjry[0:-1:plotintv, 2],
-            label="Mz",
+            label="$M_z$",
             color="tab:pink",
         )
         Mz_ax.legend(loc="upper right")
         Mz_ax.grid()
-        # Mz_ax.set_xlabel('time / s')
+        # Mz_ax.set_xlabel('time [s]')
         Mz_ax.set_ylabel("")
 
-        dMxydt_ax = fig.add_subplot(gs[0, 2])
         dMxydt_ax.plot(
-            self.timestamp[0:-1:plotintv],
+            self.timeStamp[0:-1:plotintv],
             self.dMdt[0 : -1 : int(plotintv), 0],
-            label="dMx/dt",
+            label="$d M_x / d_t$",
             color="tab:gray",
             alpha=0.7,
         )
         dMxydt_ax.plot(
-            self.timestamp[0:-1:plotintv],
+            self.timeStamp[0:-1:plotintv],
             self.dMdt[0 : -1 : int(plotintv), 1],
-            label="dMy/dt",
+            label="$d M_y / d_t$",
             color="tab:olive",
             alpha=0.7,
         )
         dMxydt_ax.legend(loc="upper right")
         dMxydt_ax.grid()
-        # dMxydt_ax.set_xlabel('time / s')
+        # dMxydt_ax.set_xlabel('time [s]')
         dMxydt_ax.set_ylabel("")
 
-        dMzdt_ax = fig.add_subplot(gs[1, 2])
         dMzdt_ax.plot(
-            self.timestamp[0:-1:plotintv],
+            self.timeStamp[0:-1:plotintv],
             self.dMdt[0 : -1 : int(plotintv), 2],
-            label="dMz/dt",
+            label="$d M_z / d_t$",
             color="tab:cyan",
             alpha=1,
         )
         dMzdt_ax.legend(loc="upper right")
         dMzdt_ax.grid()
-        dMzdt_ax.set_xlabel("time / s")
+        dMzdt_ax.set_xlabel("time [s]")
         dMzdt_ax.set_ylabel("")
 
         # McrossBxy_ax = fig.add_subplot(gs[0,3])
@@ -1453,51 +1524,48 @@ class Simulation:
         # McrossBxy_ax.plot(timestamp_step[0:-1:plotintv], self.McrossB[0:-1:int(plotintv),1], label='McrossBy', color='tab:cyan',alpha=0.7)
         # McrossBxy_ax.legend(loc='upper right')
         # McrossBxy_ax.grid()
-        # # McrossBxy_ax.set_xlabel('time / s')
+        # # McrossBxy_ax.set_xlabel('time [s]')
         # McrossBxy_ax.set_ylabel('')
         # McrossBz_ax = fig.add_subplot(gs[1,3])
         # McrossBz_ax.plot(timestamp_step[0:-1:plotintv], self.McrossB[0:-1:int(plotintv),2], label='McrossBz', color='tab:purple',alpha=1)
         # McrossBz_ax.legend(loc='upper right')
         # McrossBz_ax.grid()
-        # McrossBz_ax.set_xlabel('time / s')
+        # McrossBz_ax.set_xlabel('time [s]')
         # McrossBz_ax.set_ylabel('')
 
-        d2Mxydt_ax = fig.add_subplot(gs[0, 3])
         d2Mxydt_ax.plot(
-            self.timestamp[0:-1:plotintv],
+            self.timeStamp[0:-1:plotintv],
             self.d2Mdt2[0 : -1 : int(plotintv), 0],
-            label="d2Mxdt2",
+            label="$d^2 M_x /d t^2$",
             color="tab:blue",
             alpha=0.7,
         )
         d2Mxydt_ax.plot(
-            self.timestamp[0:-1:plotintv],
+            self.timeStamp[0:-1:plotintv],
             self.d2Mdt2[0 : -1 : int(plotintv), 1],
-            label="d2Mydt2",
+            label="$d^2 M_y /d t^2$",
             color="tab:cyan",
             alpha=0.7,
         )
         d2Mxydt_ax.legend(loc="upper right")
         d2Mxydt_ax.grid()
-        # McrossBxy_ax.set_xlabel('time / s')
+        # McrossBxy_ax.set_xlabel('time [s]')
         d2Mxydt_ax.set_ylabel("")
 
-        d2Mzdt_ax = fig.add_subplot(gs[1, 3])
         d2Mzdt_ax.plot(
-            self.timestamp[0:-1:plotintv],
+            self.timeStamp[0:-1:plotintv],
             self.d2Mdt2[0 : -1 : int(plotintv), 2],
-            label="d2Mzdt2",
+            label="$d^2 M_z /d t^2$",
             color="tab:purple",
             alpha=1,
         )
         d2Mzdt_ax.legend(loc="upper right")
         d2Mzdt_ax.grid()
-        d2Mzdt_ax.set_xlabel("time / s")
+        d2Mzdt_ax.set_xlabel("time [s]")
         d2Mzdt_ax.set_ylabel("")
 
-        fig.suptitle(
-            f"gaNN={self.excField.gaNN:.0e} axion_nu={self.excField.nu:.1e}\nXe T2={self.T2:.1g}s T1={self.T1:.1e}s"
-        )
+        fig.suptitle(f"T2={self.T2:.1g}s T1={self.T1:.1e}s")
+        # gaNN={self.excField.gaNN:.0e} axion_nu={self.excField.nu:.1e}\nXe
         # print(f'TrajectoryMonitoring_gaNN={self.ALPwind.gaNN:.0e}_axion_nu={self.ALPwind.nu:.1e}_Xe_T2={self.T2:.1g}s_T1={self.T1:.1e}s')
         plt.tight_layout()
         plt.show()
@@ -1553,7 +1621,7 @@ class Simulation:
         threeD_ax.w_yaxis.set_pane_color((1, 1, 1, 0.0))
         threeD_ax.w_zaxis.set_pane_color((1, 1, 1, 0.0))
 
-        r = self.init_magamp
+        r = self.init_M_amp
         u, v = np.mgrid[0 : 2 * np.pi : 30j, 0 : np.pi : 20j]
         x = np.cos(u) * np.sin(v)
         y = np.sin(u) * np.sin(v)
@@ -1568,12 +1636,11 @@ class Simulation:
         except NotImplementedError:
             pass
         threeD_ax.set_box_aspect((1, 1, 1))
-        fig.suptitle(
-            f"gaNN={self.excField.gaNN:.0e} axion_nu={self.excField.nu:.1e}\nXe T2={self.T2:.1g}s T1={self.T1:.1e}s"
-        )
-        print(
-            f"TrajectoryVisualization_gaNN={self.excField.gaNN:.0e}_axion_nu={self.excField.nu:.1e}_Xe_T2={self.T2:.1g}s_T1={self.T1:.1e}s"
-        )
+        fig.suptitle(f"T2={self.T2:.1g}s T1={self.T1:.1e}s")
+        # gaNN={self.excField.gaNN:.0e} axion_nu={self.excField.nu:.1e}\nXe
+        # print(
+        #     f"TrajectoryVisualization_gaNN={self.excField.gaNN:.0e}_axion_nu={self.excField.nu:.1e}_Xe_T2={self.T2:.1g}s_T1={self.T1:.1e}s"
+        # )
         plt.tight_layout()
         plt.show()
 
@@ -1653,3 +1720,119 @@ class Simulation:
         h5sample.create_dataset("vol", data=[self.sample.vol])
         h5sample.create_dataset("mdm", data=[self.sample.mdm])
         h5f.close()
+
+    def analyzeTrajectory(
+        self,
+    ):
+        self.trjryStream = LIASignal(
+            name="Simulation data",
+            device="Simulation",
+            device_id="Simulation",
+            filelist=[],
+            verbose=True,
+        )
+        self.trjryStream.attenuation = 0
+        self.trjryStream.filterstatus = "off"
+        self.trjryStream.filter_TC = 0.0
+        self.trjryStream.filter_order = 0
+        self.trjryStream.dmodfreq = self.demodfreq
+        saveintv = 1
+        self.trjryStream.samprate = self.simuRate / saveintv
+        # check(self.timestamp.shape)
+        # check(self.trjry[0:-1:saveintv, 0].shape)
+
+        self.trjryStream.dataX = (
+            1 * self.trjry[int(0 * self.simuRate) : -1 : saveintv, 0]
+        )  # * \
+        # np.cos(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+        self.trjryStream.dataY = (
+            1 * self.trjry[int(0 * self.simuRate) : -1 : saveintv, 1]
+        )  # * \
+        # np.sin(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+
+        # self.liastream.dataX = 0.5 * 1 * \
+        # 	np.cos(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+        # self.liastream.dataY = 0.5 * 1 * \
+        # 	np.sin(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+
+        self.trjryStream.GetNoPulsePSD(
+            windowfunction="rectangle",
+            # decayfactor=-10,
+            chunksize=None,  # sec
+            analysisrange=[0, -1],
+            getstd=False,
+            stddev_range=None,
+            # polycorrparas=[],
+            # interestingfreq_list=[],
+            selectshots=[],
+            verbose=False,
+        )
+        self.trjryStream.FitPSD(
+            fitfunction="Lorentzian",  # 'Lorentzian' 'dualLorentzian' 'tribLorentzian' 'Gaussian 'dualGaussian' 'auto' 'Polyeven'
+            inputfitparas=["auto", "auto", "auto", "auto"],
+            smooth=False,
+            smoothlevel=1,
+            fitrange=["auto", "auto"],
+            alpha=0.05,
+            getresidual=False,
+            getchisq=False,
+            verbose=False,
+        )
+
+    def analyzeB1(
+        self,
+    ):
+        self.B1Stream = LIASignal(
+            name="Simulation data",
+            device="Simulation",
+            device_id="Simulation",
+            filelist=[],
+            verbose=True,
+        )
+        self.B1Stream.attenuation = 0
+        self.B1Stream.filterstatus = "off"
+        self.B1Stream.filter_TC = 0.0
+        self.B1Stream.filter_order = 0
+        self.B1Stream.dmodfreq = self.demodfreq
+        saveintv = 1
+        self.B1Stream.samprate = self.simuRate / saveintv
+        # check(self.timestamp.shape)
+        # check(self.trjry[0:-1:saveintv, 0].shape)
+
+        self.B1Stream.dataX = (
+            1 * self.excField.B_vec[int(0 * self.simuRate) : -1 : saveintv, 0]
+        )  # * \
+        # np.cos(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+        self.B1Stream.dataY = (
+            1 * self.excField.B_vec[int(0 * self.simuRate) : -1 : saveintv, 1]
+        )  # * \
+        # np.sin(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+
+        # self.B1stream.dataX = 0.5 * 1 * \
+        # 	np.cos(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+        # self.B1stream.dataY = 0.5 * 1 * \
+        # 	np.sin(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+
+        self.B1Stream.GetNoPulsePSD(
+            windowfunction="rectangle",
+            # decayfactor=-10,
+            chunksize=None,  # sec
+            analysisrange=[0, -1],
+            getstd=False,
+            stddev_range=None,
+            # polycorrparas=[],
+            # interestingfreq_list=[],
+            selectshots=[],
+            verbose=False,
+        )
+        self.B1Stream.FitPSD(
+            fitfunction="Lorentzian",  # 'Lorentzian' 'dualLorentzian' 'tribLorentzian' 'Gaussian 'dualGaussian' 'auto' 'Polyeven'
+            inputfitparas=["auto", "auto", "auto", "auto"],
+            smooth=False,
+            smoothlevel=1,
+            fitrange=["auto", "auto"],
+            alpha=0.05,
+            getresidual=False,
+            getchisq=False,
+            verbose=False,
+        )
