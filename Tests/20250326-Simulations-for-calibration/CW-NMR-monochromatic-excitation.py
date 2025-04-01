@@ -22,14 +22,14 @@ ExampleSample10MHzT = Sample(
     numofnuclei=1,  #
     tempunit="K",  # temperature scale
     T2=1 / (10 * np.pi),  # [s]
-    T1=1000,  # [s]
+    T1=2/ (10 * np.pi),  # [s]
     pol=1,
     verbose=False,
 )
 
 
 excField = MagField(name="excitation field")  # excitation field in the rotating frame
-excField.nu = 1e6 + 5  # [Hz]
+excField.nu = 1e6  # [Hz]
 
 
 simu = Simulation(
@@ -44,14 +44,14 @@ simu = Simulation(
     demodfreq=1e6,
     B0z=(1e6 - 0) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
     simuRate=(6696.42871094),  #
-    duration=10,
+    duration=5,
     excField=excField,
     verbose=False,
 )
 
 simu.generatePulseExcitation(
     pulseDur=1.0 * simu.duration,
-    tipAngle=np.pi / 1000,
+    tipAngle=np.pi,
     direction=np.array([1, 0, 0]),
     showplt=False,  # whether to plot B_ALP
     plotrate=None,
@@ -64,11 +64,11 @@ toc = time.perf_counter()
 print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
 simu.MonitorTrajectory(plotrate=1000, verbose=True)
-# simu.VisualizeTrajectory3D(
-#     plotrate=1e3,  # [Hz]
-#     # rotframe=True,
-#     verbose=False,
-# )
+simu.VisualizeTrajectory3D(
+    plotrate=1e3,  # [Hz]
+    # rotframe=True,
+    verbose=False,
+)
 
 processdata = True
 if processdata:

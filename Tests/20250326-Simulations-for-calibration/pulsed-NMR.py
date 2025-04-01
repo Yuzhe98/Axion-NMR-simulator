@@ -31,14 +31,14 @@ ExampleSample10MHzT = Sample(
     spindenisty_solid=None,  # [mol/cm^3]
     shareofpeaks=[1.0],  # array or list.
     T2=1,  # [s]
-    T1=1000,  # [s]
+    T1=1,  # [s]
     pol=1,
     verbose=False,
 )
 
 
 excField = MagField(name="excitation field")  # excitation field in the rotating frame
-excField.nu = 1e6 - 10  # [Hz]
+excField.nu = 1e6  # [Hz]
 
 
 simu = Simulation(
@@ -51,9 +51,9 @@ simu = Simulation(
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
     demodfreq=1e6,
-    B0z=(1e6 - 10) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
+    B0z=(1e6) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
     simuRate=(6696.42871094),  #
-    duration=5,
+    duration=10,
     excField=excField,
     verbose=False,
 )
