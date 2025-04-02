@@ -2914,6 +2914,23 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
 
     """
     c = 299792458.0  # Speed of light (in m/s)
+    v_0, v_lab = np.abs(v_0), np.abs(v_lab)
+    
+    shift = 0#max(1 - np.amin(nu), 1 + np.abs(nu_a))
+    nu_a += shift
+    nu += shift
+
+    full_lineshape = np.zeros(len(nu))
+
+    # Find the index of the first non-zero element
+    positive_indices = np.where(nu > nu_a)[0]
+    if positive_indices.size > 0:
+        nu_a_index = positive_indices[0]
+    else:
+        return full_lineshape
+
+    freq = nu[nu_a_index:-1]
+    
 
     assert case in [
         "non-grad",
@@ -2922,27 +2939,37 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
     ], "Case should be 'non-grad', 'grad_par', or 'grad_perp'!"
 
     beta = (
-        2 * c * v_lab * np.sqrt(2 * (abs(nu - nu_a) + abs(nu_a) * 1e-8) / nu_a) / v_0**2
+        2
+        * c
+        * v_lab
+        * np.sqrt(2 * (freq - nu_a) / nu_a)
+        / v_0**2
     )  # Eq. (13)
+    # *np.sqrt(2 * (nu - nu_a) / nu_a)
+    # for arr in [beta]:
+    #     print('beta check')
+    #     has_nan = np.isnan(arr).any()  # Check for NaN
+    #     has_inf = np.isinf(arr).any()  # Check for Inf
 
+    #     print(f"Contains NaN: {has_nan}")  # Output: True
+    #     print(f"Contains Inf: {has_inf}")  # Output: True
     if case == "non-grad":  # Non-gradient case, Eq. (12)
-        return (
-            np.heaviside(nu - nu_a, 0)
-            * 2
+        ax_sq_lineshape = (
+            2
             * c**2
             * np.exp(-((0.5 * beta * v_0 / v_lab) ** 2) - (v_lab / v_0) ** 2)
             * np.sinh(beta)
             / (np.sqrt(np.pi) * v_0 * v_lab * nu_a)
         )
+        
     elif case == "grad_par":  # Parallel gradient case, Eq. (19)
         factor = (
             np.cos(alpha) ** 2
             - (1 / np.tanh(beta) - 1.0 / beta) * (2 - 3 * np.sin(alpha) ** 2) / beta
         )
-        return (
-            np.heaviside(nu - nu_a, 0)
-            * (4 * c**2 / (v_0**2 + 2 * (v_lab * np.cos(alpha)) ** 2))
-            * (nu / nu_a - 1)
+        ax_sq_lineshape= (
+            (4 * c**2 / (v_0**2 + 2 * (v_lab * np.cos(alpha)) ** 2))
+            * (freq / nu_a - 1)
             * factor
             * axion_lineshape(v_0, v_lab, nu_a, nu)
         )
@@ -2953,16 +2980,19 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
             * (2.0 - 3.0 * np.sin(alpha) ** 2)
             / beta
         )
-        return (
-            np.heaviside(nu - nu_a, 0)
-            * (2 * c**2 / (v_0**2 + (v_lab * np.sin(alpha)) ** 2))
-            * (nu / nu_a - 1)
+        ax_sq_lineshape = (
+            (2 * c**2 / (v_0**2 + (v_lab * np.sin(alpha)) ** 2))
+            * (freq / nu_a - 1)
             * factor
-            * axion_lineshape(v_0, v_lab, nu_a, nu)
+            * axion_lineshape(v_0, v_lab, nu_a, nu)[nu_a_index:-1]
         )
     else:  # adding this to try and get rid of an error message
         return np.zeros(nu.shape)
-
+    
+    full_lineshape[nu_a_index:-1] += ax_sq_lineshape
+    # nu_a -= shift
+    nu -= shift
+    return full_lineshape
 
 # def get_ALP_wind(
 #     year=None,
