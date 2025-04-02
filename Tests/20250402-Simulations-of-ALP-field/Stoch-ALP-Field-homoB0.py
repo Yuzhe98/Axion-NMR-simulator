@@ -1,7 +1,15 @@
+import os
+import sys
+
+# print(os.path.abspath(os.curdir))
+# os.chdir("..")  # go to parent folder
+# os.chdir("..")  # go to parent folder
+# print(os.path.abspath(os.curdir))
+sys.path.insert(0, os.path.abspath(os.curdir))
+
 import numpy as np
 import time
-from SimuTools import Sample, MagField, Simulation, TTL
-from DataAnalysis import LIASignal
+from SimuTools import Sample, MagField, Simulation
 from functioncache import check
 
 ExampleSample10MHzT = Sample(
@@ -67,7 +75,7 @@ simu.analyzeTrajectory()
 
 specxaxis, spectrum, specxunit, specyunit = simu.trjryStream.GetSpectrum(
     showtimedomain=True,
-    showfit=True,
+    showfit=False,
     showresidual=False,
     showlegend=True,  # !!!!!show or not to show legend
     spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
