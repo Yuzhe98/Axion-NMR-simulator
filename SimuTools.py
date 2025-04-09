@@ -2,8 +2,12 @@
 # import warnings
 # from turtle import color
 from cycler import V
+from sympy import use
 from functioncache import *
+
 import numpy as np
+
+# from numpy.fft import fft, ifft, fftfreq
 
 # import matplotlib
 import matplotlib.pyplot as plt
@@ -40,6 +44,11 @@ def TTL(x: float | np.ndarray, start: float, stop: float) -> float:
     # else:
     #     return 0
     return np.where((start <= x) & (x <= stop), 1.0, 0.0)
+
+
+# def timeDerivative(
+#         DeltaT:float, arr:np.ndarray)->np.ndarray:
+#     arr
 
 
 class Sample:
@@ -360,8 +369,9 @@ class MagField:
         timeStamp: np.ndarray,
         Brms: float,  # RMS amplitude of the pseudo-magnetic field in [T]
         nu_a: float,  # frequency in the rotating frame
+        use_stoch: bool,
         # direction: np.ndarray,  #  = np.array([1, 0, 0])
-        demodfreq:float,
+        demodfreq: float,
         makeplot: bool = False,
         verbose: bool = False,
     ):
@@ -394,8 +404,10 @@ class MagField:
             rvs_phase = np.exp(1j * uniform.rvs(loc=0, scale=2 * np.pi, size=timeLen))
             # rvs_phase = 1.0
 
-            ax_sq_lineshape = lineshape * rvs_amp
-            # ax_sq_lineshape = lineshape
+            if use_stoch:
+                ax_sq_lineshape = lineshape * rvs_amp
+            else:
+                ax_sq_lineshape = lineshape
             ax_lineshape = np.sqrt(ax_sq_lineshape)
             # if makeplot:
             #     plt.figure()
@@ -408,7 +420,7 @@ class MagField:
 
             #     print(f"Contains NaN: {has_nan}")  # Output: True
             #     print(f"Contains Inf: {has_inf}")  # Output: True
-            
+
             # inverse FFT method
             # ax_FFT = np.sqrt(stoch_a_sq_lineshape) * rvs_phase
             # Ba_t = np.fft.ifft(ax_FFT)
@@ -432,12 +444,19 @@ class MagField:
             dBxdt_amp = np.zeros(timeLen)
             dBydt_amp = np.zeros(timeLen)
 
+            if use_stoch:
+                init_phase = uniform.rvs(loc=0, scale=2 * np.pi, size=timeLen)
+            else:
+                init_phase = uniform.rvs(loc=0, scale=2 * np.pi, size=1) * np.ones(
+                    timeLen
+                )
+
             for i in np.arange(first_positive_index, timeLen, dtype=int):
                 nu_rot = frequencies[i]
                 ax_amp = ax_lineshape[i]
-                # random phase
-                init_phase = uniform.rvs(loc=0, scale=2 * np.pi, size=1)
-                By_init_phase = uniform.rvs(loc=0, scale=2 * np.pi, size=1)
+                #  phase
+                # init_phase_0 = init_phase[i]
+                # By_init_phase = uniform.rvs(loc=0, scale=2 * np.pi, size=1)
                 # # fixed phase
                 # Bx_init_phase = 0
                 # By_init_phase = 0
@@ -447,14 +466,14 @@ class MagField:
                     0.5
                     * Brms
                     * ax_amp
-                    * np.cos(2 * np.pi * nu_rot * timeStamp + init_phase)
+                    * np.cos(2 * np.pi * nu_rot * timeStamp + init_phase[i])
                 )
                 # By
                 By_amp += (
                     0.5
                     * Brms
                     * ax_amp
-                    * np.sin(2 * np.pi * nu_rot * timeStamp + init_phase)
+                    * np.sin(2 * np.pi * nu_rot * timeStamp + init_phase[i])
                 )
                 # dBx / dt
                 dBxdt_amp += (
@@ -462,7 +481,7 @@ class MagField:
                     * Brms
                     * ax_amp
                     * (2 * np.pi * nu_rot)
-                    * np.cos(2 * np.pi * nu_rot * timeStamp + init_phase)
+                    * np.cos(2 * np.pi * nu_rot * timeStamp + init_phase[i])
                 )
                 # dBy / dt
                 dBydt_amp += (
@@ -470,9 +489,9 @@ class MagField:
                     * Brms
                     * ax_amp
                     * (-2 * np.pi * nu_rot)
-                    * np.sin(2 * np.pi * nu_rot * timeStamp + init_phase)
+                    * np.sin(2 * np.pi * nu_rot * timeStamp + init_phase[i])
                 )
-            
+
             Bx = np.outer(Bx_amp, np.array([1, 0, 0]))
             By = np.outer(By_amp, np.array([0, 1, 0]))
             dBxdt = np.outer(dBxdt_amp, np.array([1, 0, 0]))
@@ -538,8 +557,284 @@ class MagField:
                     return_opt=True,
                 )
 
+        def setALP_Field_invFFT():
+            """
+            generate Bx, By, dBxdt, dBydt
+            """
+            frequencies = np.linspace(
+                -0.5 / timeStep, 0.5 / timeStep, num=timeLen + 2, endpoint=True
+            )
+            lineshape = axion_lineshape(
+                v_0=220e3,
+                v_lab=233e3,
+                nu_a=nu_a + demodfreq,
+                nu=frequencies + demodfreq,
+                case="grad_perp",
+                alpha=0.0,
+            )
+
+            rvs_amp = expon.rvs(loc=0.0, scale=1.0, size=timeLen + 2)
+            # rvs_amp = 1.0
+            rvs_phase = np.exp(
+                1j * uniform.rvs(loc=0, scale=2 * np.pi, size=timeLen + 2)
+            )
+            # rvs_phase = 1.0
+
+            if use_stoch:
+                ax_sq_lineshape = lineshape * rvs_amp
+            else:
+                ax_sq_lineshape = lineshape
+            ax_lineshape = np.sqrt(ax_sq_lineshape)
+
+            # check lineshape sanity
+            # for arr in [lineshape, ax_lineshape]:
+            #     has_nan = np.isnan(arr).any()  # Check for NaN
+            #     has_inf = np.isinf(arr).any()  # Check for Inf
+
+            #     print(f"Contains NaN: {has_nan}")  # Output: True
+            #     print(f"Contains Inf: {has_inf}")  # Output: True
+
+            # inverse FFT method
+            ax_FFT = ax_lineshape * rvs_phase
+            
+            Ba_t = np.fft.ifft(ax_FFT)
+            # if makeplot:
+            #     plt.figure()
+            #     plt.plot(frequencies, np.abs(np.fft.fft(Ba_t)))
+            #     plt.show()
+            Bx_amp, By_amp = np.real(Ba_t), np.imag(Ba_t)
+            dBxdt_amp = np.gradient(Bx_amp, timeStep)
+            dBydt_amp = np.gradient(By_amp, timeStep)
+            # check((len(Bx_amp), len(By_amp), len(dBxdt_amp), len(dBydt_amp)))
+            # check(timeLen + 2)
+
+            # Bx_amp, By_amp, dBxdt_amp, dBydt_amp = (
+            #     Bx_amp[1:-1],
+            #     By_amp[1:-1],
+            #     dBxdt_amp[1:-1],
+            #     dBydt_amp[1:-1],
+            # )
+            # check((len(Bx_amp), len(By_amp), len(dBxdt_amp), len(dBydt_amp)))
+
+            Bx = np.outer(Bx_amp, np.array([1, 0, 0]))
+            By = np.outer(By_amp, np.array([0, 1, 0]))
+            dBxdt = np.outer(dBxdt_amp, np.array([1, 0, 0]))
+            dBydt = np.outer(dBydt_amp, np.array([0, 1, 0]))
+
+            self.B_vec = Bx + By
+            self.dBdt_vec = dBxdt + dBydt
+            # if makeplot:
+
+            #     plt.figure()
+            #     plt.plot(
+            #         np.abs(np.fft.fft(self.B_vec[::1, 0] + 1j * self.B_vec[::1, 1]))
+            #     )
+            #     plt.show()
+            # if makeplot:
+            #     plt.figure()
+            #     plt.plot(frequencies, np.abs(ax_FFT))
+            #     plt.title('np.abs(ax_FFT)')
+            #     plt.show()
+            
+            if makeplot:
+                # freqs, singlePSD = stdLIAPSD(
+                #     data_x=self.B_vec[::1, 0],
+                #     data_y=self.B_vec[::1, 1],
+                #     samprate=1 / timeStep,
+                #     demodfreq=demodfreq,
+                # )
+                data_x=Bx_amp
+                data_y=By_amp
+                freqs:np.ndarray = np.fft.fftfreq(
+                    len(data_x), d=timeStep
+                )
+                # check(freqs)
+                plt.figure()
+                plt.plot(freqs)
+                plt.show()
+                bxy = np.fft.ifft(ax_FFT)
+                FFT = np.fft.fft(bxy, norm=None)
+                PSD = np.abs(FFT) ** 2.0
+                plt.figure()
+                plt.scatter(freqs, PSD)
+                plt.show()
+            if makeplot:
+                self.B_Stream = LIASignal(
+                    name="ALP field gradient",
+                    device="Simulation",
+                    device_id="Simulation",
+                    filelist=[],
+                    verbose=True,
+                )
+                self.B_Stream.attenuation = 0
+                self.B_Stream.filterstatus = "off"
+                self.B_Stream.filter_TC = 0.0
+                self.B_Stream.filter_order = 0
+                self.B_Stream.dmodfreq = demodfreq
+                saveintv = 1
+                self.B_Stream.samprate = 1.0 / timeStep / saveintv
+
+                self.B_Stream.dataX = 1 * self.B_vec[::saveintv, 0]  # * \
+                # np.cos(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+                self.B_Stream.dataY = 1 * self.B_vec[::saveintv, 1]
+
+                self.B_Stream.GetNoPulsePSD(
+                    # windowfunction="Hanning",
+                    windowfunction="rectangle",
+                    # decayfactor=-10,
+                    chunksize=None,  # sec
+                    analysisrange=[0, -1],
+                    getstd=False,
+                    stddev_range=None,
+                    selectshots=[],
+                    verbose=False,
+                )
+                # self.B_Stream.FitPSD(
+                #     fitfunction="Lorentzian",  # 'Lorentzian' 'dualLorentzian' 'tribLorentzian' 'Gaussian 'dualGaussian' 'auto' 'Polyeven'
+                #     inputfitparas=["auto", "auto", "auto", "auto"],
+                #     smooth=False,
+                #     smoothlevel=1,
+                #     fitrange=["auto", "auto"],
+                #     alpha=0.05,
+                #     getresidual=False,
+                #     getchisq=False,
+                #     verbose=False,
+                # )
+                specxaxis, spectrum, specxunit, specyunit = self.B_Stream.GetSpectrum(
+                    showtimedomain=True,
+                    showfit=True,
+                    showresidual=False,
+                    showlegend=True,  # !!!!!show or not to show legend
+                    spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
+                    ampunit="V",
+                    specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
+                    # specxlim=[nu_a + demodfreq - 5, nu_a + demodfreq + 20],
+                    # specylim=[0, 4e-23],
+                    specyscale="linear",  # 'log', 'linear'
+                    showstd=False,
+                    showplt_opt=True,
+                    return_opt=True,
+                )
+
+        def setALP_Field_invFFT_2():
+            """
+            generate Bx, By, dBxdt, dBydt
+            """
+            frequencies = np.linspace(
+                -0.5 / timeStep, 0.5 / timeStep, num=timeLen, endpoint=True
+            )
+            lineshape = axion_lineshape(
+                v_0=220e3,
+                v_lab=233e3,
+                nu_a=nu_a + demodfreq,
+                nu=frequencies + demodfreq,
+                case="grad_perp",
+                alpha=0.0,
+            )
+
+            rvs_amp = expon.rvs(loc=0.0, scale=1.0, size=timeLen)
+            # rvs_amp = 1.0
+            rvs_phase = np.exp(1j * uniform.rvs(loc=0, scale=2 * np.pi, size=timeLen))
+            # rvs_phase = 1.0
+
+            if use_stoch:
+                ax_sq_lineshape = lineshape * rvs_amp
+            else:
+                ax_sq_lineshape = lineshape
+            ax_lineshape = np.sqrt(ax_sq_lineshape)
+            # if makeplot:
+            #     plt.figure()
+            #     plt.plot(ax_lineshape)
+            #     plt.show()
+            # check lineshape sanity
+            # for arr in [lineshape, ax_lineshape]:
+            #     has_nan = np.isnan(arr).any()  # Check for NaN
+            #     has_inf = np.isinf(arr).any()  # Check for Inf
+
+            #     print(f"Contains NaN: {has_nan}")  # Output: True
+            #     print(f"Contains Inf: {has_inf}")  # Output: True
+
+            # inverse FFT method
+            ax_FFT = ax_lineshape * rvs_phase
+            Ba_t = np.fft.ifft(ax_FFT)
+            Bx_amp, By_amp = np.real(Ba_t), np.imag(Ba_t)
+            N = len(ax_FFT)
+            check(N)
+            check(timeLen)
+            freq = np.fft.fftfreq(N, timeStep)
+
+            # Y = np.fft.fft(y)
+            dBadt_FFT = 1j * 2 * np.pi * freq * ax_FFT
+            dBadt = np.fft.ifft(dBadt_FFT)
+            dBxdt_amp, dBydt_amp = np.real(dBadt), np.imag(dBadt)
+
+            Bx = np.outer(Bx_amp, np.array([1, 0, 0]))
+            By = np.outer(By_amp, np.array([0, 1, 0]))
+            dBxdt = np.outer(dBxdt_amp, np.array([1, 0, 0]))
+            dBydt = np.outer(dBydt_amp, np.array([0, 1, 0]))
+
+            self.B_vec = Bx + By
+            self.dBdt_vec = dBxdt + dBydt
+
+            if makeplot:
+                self.B_Stream = LIASignal(
+                    name="ALP field gradient",
+                    device="Simulation",
+                    device_id="Simulation",
+                    filelist=[],
+                    verbose=True,
+                )
+                self.B_Stream.attenuation = 0
+                self.B_Stream.filterstatus = "off"
+                self.B_Stream.filter_TC = 0.0
+                self.B_Stream.filter_order = 0
+                self.B_Stream.dmodfreq = demodfreq
+                saveintv = 1
+                self.B_Stream.samprate = 1.0 / timeStep / saveintv
+
+                self.B_Stream.dataX = 1 * self.B_vec[::saveintv, 0]  # * \
+                # np.cos(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
+                self.B_Stream.dataY = 1 * self.B_vec[::saveintv, 1]
+
+                self.B_Stream.GetNoPulsePSD(
+                    windowfunction="Hanning",
+                    # decayfactor=-10,
+                    chunksize=None,  # sec
+                    analysisrange=[0, -1],
+                    getstd=False,
+                    stddev_range=None,
+                    selectshots=[],
+                    verbose=False,
+                )
+                # self.B_Stream.FitPSD(
+                #     fitfunction="Lorentzian",  # 'Lorentzian' 'dualLorentzian' 'tribLorentzian' 'Gaussian 'dualGaussian' 'auto' 'Polyeven'
+                #     inputfitparas=["auto", "auto", "auto", "auto"],
+                #     smooth=False,
+                #     smoothlevel=1,
+                #     fitrange=["auto", "auto"],
+                #     alpha=0.05,
+                #     getresidual=False,
+                #     getchisq=False,
+                #     verbose=False,
+                # )
+                specxaxis, spectrum, specxunit, specyunit = self.B_Stream.GetSpectrum(
+                    showtimedomain=True,
+                    showfit=True,
+                    showresidual=False,
+                    showlegend=True,  # !!!!!show or not to show legend
+                    spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
+                    ampunit="V",
+                    specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
+                    # specxlim=[nu_a + demodfreq - 5, nu_a + demodfreq + 20],
+                    # specylim=[0, 4e-23],
+                    specyscale="linear",  # 'log', 'linear'
+                    showstd=False,
+                    showplt_opt=True,
+                    return_opt=True,
+                )
+
         if method == "inverse-FFT":
-            pass
+            setALP_Field_invFFT()
         elif method == "time-interfer":
             setALP_Field_timeIntf()
         else:
@@ -1641,7 +1936,7 @@ class Simulation:
         Mz_ax.grid()
         # Mz_ax.set_xlabel('time [s]')
         Mz_ax.set_ylabel("")
-        Mz_ax.set_ylim(0,1)
+        Mz_ax.set_ylim(0, 1)
 
         dMxydt_ax.plot(
             self.timeStamp[0:-1:plotintv],
@@ -1893,7 +2188,7 @@ class Simulation:
         self.trjryStream.dmodfreq = self.demodfreq
         saveintv = 1
         self.trjryStream.samprate = self.simuRate / saveintv
-        self.trjryStream.exptype = 'Simulation'
+        self.trjryStream.exptype = "Simulation"
         # check(self.timestamp.shape)
         # check(self.trjry[0:-1:saveintv, 0].shape)
 

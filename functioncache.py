@@ -1318,12 +1318,12 @@ def stdLIAPSD(
     data_x=None,
     data_y=None,
     samprate=None,
-    dfreq=None,
-    attenuation=None,
+    demodfreq:float=0.,
+    attenuation=0,
     windowfunction="rectangle",
     decayfactor=-10,
     showwindow=False,
-    DTRCfilter="on",
+    DTRCfilter="off",
     DTRCfilter_TC=1e-6,
     DTRCfilter_order=8,
     verbose=False,
@@ -1435,7 +1435,7 @@ def stdLIAPSD(
         print(f"S2 = {S2:g}")
 
     # Compute frequency axis from time-series length and sampling rate
-    frequencies = np.fft.fftfreq(
+    frequencies:np.ndarray = np.fft.fftfreq(
         len(data_x), d=1.0 / samprate
     )  # Set d to dwell time in s
 
@@ -1452,7 +1452,7 @@ def stdLIAPSD(
     # add demodulator frequency to get absolute frequency
     # Notice that this action should be not be done before LIAFilterHomega()
     # because this function accepts demodulated frequencies
-    frequencies += dfreq  #
+    frequencies += demodfreq  #
 
     # show window array
     if showwindow:
@@ -1560,6 +1560,8 @@ def stdLIAPSD(
         print("samprate ", samprate)
 
     return np.sort(frequencies), PSD[np.argsort(frequencies)]
+    # return frequencies, PSD
+    # return np.sort(frequencies), PSD
 
 
 def stdLIAFFT(

@@ -39,44 +39,46 @@ simu = Simulation(
 )
 
 tic = time.perf_counter()
+check(simu.demodfreq)
 simu.excField.setALP_Field(
-    method='time-interfer',
+    method='inverse-FFT',
         timeStamp=simu.timeStamp,
         Brms=1e-8,  # RMS amplitude of the pseudo-magnetic field in [T]
         nu_a=(5),  # frequency in the rotating frame
         # direction: np.ndarray,  #  = np.array([1, 0, 0])
+        use_stoch=False,
         demodfreq=simu.demodfreq,
-        makeplot=False)
+        makeplot=True)
 simu.excType = "ALP"
 toc = time.perf_counter()
 print(f"setALP_Field() time consumption = {toc-tic:.3f} s")
 
-tic = time.perf_counter()
-simu.GenerateTrajectory(verbose=False)
-toc = time.perf_counter()
-print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
+# tic = time.perf_counter()
+# simu.GenerateTrajectory(verbose=False)
+# toc = time.perf_counter()
+# print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-simu.MonitorTrajectory(plotrate=133, verbose=True)
-simu.VisualizeTrajectory3D(
-    plotrate=1e3,  # [Hz]
-    # rotframe=True,
-    verbose=False,
-)
+# simu.MonitorTrajectory(plotrate=133, verbose=True)
+# simu.VisualizeTrajectory3D(
+#     plotrate=1e3,  # [Hz]
+#     # rotframe=True,
+#     verbose=False,
+# )
 
-simu.analyzeTrajectory()
+# simu.analyzeTrajectory()
 
-specxaxis, spectrum, specxunit, specyunit = simu.trjryStream.GetSpectrum(
-    showtimedomain=True,
-    showfit=True,
-    showresidual=False,
-    showlegend=True,  # !!!!!show or not to show legend
-    spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
-    ampunit="V",
-    specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
-    specxlim=[simu.demodfreq - 0 , simu.demodfreq + 20],
-    # specylim=[0, 4e-23],
-    specyscale="linear",  # 'log', 'linear'
-    showstd=False,
-    showplt_opt=True,
-    return_opt=True,
-)
+# specxaxis, spectrum, specxunit, specyunit = simu.trjryStream.GetSpectrum(
+#     showtimedomain=True,
+#     showfit=True,
+#     showresidual=False,
+#     showlegend=True,  # !!!!!show or not to show legend
+#     spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
+#     ampunit="V",
+#     specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
+#     specxlim=[simu.demodfreq - 0 , simu.demodfreq + 20],
+#     # specylim=[0, 4e-23],
+#     specyscale="linear",  # 'log', 'linear'
+#     showstd=False,
+#     showplt_opt=True,
+#     return_opt=True,
+# )

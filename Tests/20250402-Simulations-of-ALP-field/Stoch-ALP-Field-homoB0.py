@@ -20,14 +20,13 @@ ExampleSample10MHzT = Sample(
     * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
     numofnuclei=1,  #
     tempunit="K",  # temperature scale
-    T2=1 / np.pi,  # [s]
-    T1=1000,  # [s]
+    T2=1000,  # [s]
+    T1=10000,  # [s]
     pol=1,
     verbose=False,
 )
 
 ALP_Field_grad = MagField(name="ALP field gradient")  # excitation field in the rotating frame
-# excField.nu = 1e6 - 10  # [Hz]
 
 simu = Simulation(
     name="TestSample 10MHzT",
@@ -50,9 +49,10 @@ tic = time.perf_counter()
 simu.excField.setALP_Field(
     method='time-interfer',
         timeStamp=simu.timeStamp,
-        Brms=1e-8,  # RMS amplitude of the pseudo-magnetic field in [T]
-        nu_a=(5),  # frequency in the rotating frame
+        Brms=1e-15,  # RMS amplitude of the pseudo-magnetic field in [T]
+        nu_a=(-0.5),  # frequency in the rotating frame
         # direction: np.ndarray,  #  = np.array([1, 0, 0])
+        use_stoch=False,
         demodfreq=simu.demodfreq,
         makeplot=False)
 simu.excType = "ALP"
@@ -71,17 +71,20 @@ simu.VisualizeTrajectory3D(
     verbose=False,
 )
 
-simu.analyzeTrajectory()
 
+tau_a = 1e6 / np.abs(simu.excField.nu + simu.demodfreq)
+check(tau_a)
+check(1/(np.pi * np.sqrt(simu.sample.T2 * tau_a)))
+simu.analyzeTrajectory()
 specxaxis, spectrum, specxunit, specyunit = simu.trjryStream.GetSpectrum(
     showtimedomain=True,
-    showfit=False,
+    showfit=True,
     showresidual=False,
     showlegend=True,  # !!!!!show or not to show legend
     spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
     ampunit="V",
     specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
-    specxlim=[simu.demodfreq - 0 , simu.demodfreq + 20],
+    specxlim=[simu.demodfreq - 5 , simu.demodfreq + 12],
     # specylim=[0, 4e-23],
     specyscale="linear",  # 'log', 'linear'
     showstd=False,
