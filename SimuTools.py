@@ -363,6 +363,72 @@ class MagField:
         #     return duty_func(timeStamp) * B1 * np.sin(2 * np.pi * nu_e * timeStamp + init_phase)
         # return
 
+    def showTSandPSD(
+        self, dataX: np.ndarray, dataY: np.ndarray, demodfreq, samprate, showplt_opt
+    ):
+        """
+        dataX=,
+        dataY=,
+        demodfreq=,
+        samprate=,
+        showplt_opt=True
+        """
+        stream = LIASignal(
+            name="ALP field gradient",
+            device="Simulation",
+            device_id="Simulation",
+            filelist=[],
+            verbose=True,
+        )
+        stream.attenuation = 0
+        stream.filterstatus = "off"
+        stream.filter_TC = 0.0
+        stream.filter_order = 0
+        stream.dmodfreq = demodfreq
+        stream.samprate = samprate
+
+        stream.dataX = dataX
+        stream.dataY = dataY
+
+        stream.GetNoPulsePSD(
+            # windowfunction="Hanning",
+            windowfunction="rectangle",
+            # decayfactor=-10,
+            chunksize=None,  # sec
+            analysisrange=[0, -1],
+            getstd=False,
+            stddev_range=None,
+            selectshots=[],
+            verbose=False,
+        )
+        # stream.FitPSD(
+        #     fitfunction="Lorentzian",  # 'Lorentzian' 'dualLorentzian' 'tribLorentzian' 'Gaussian 'dualGaussian' 'auto' 'Polyeven'
+        #     inputfitparas=["auto", "auto", "auto", "auto"],
+        #     smooth=False,
+        #     smoothlevel=1,
+        #     fitrange=["auto", "auto"],
+        #     alpha=0.05,
+        #     getresidual=False,
+        #     getchisq=False,
+        #     verbose=False,
+        # )
+        specxaxis, spectrum, specxunit, specyunit = stream.GetSpectrum(
+            showtimedomain=True,
+            # showfit=True,
+            showresidual=False,
+            showlegend=True,  # !!!!!show or not to show legend
+            spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
+            ampunit="V",
+            specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
+            # specxlim=[nu_a + demodfreq - 5, nu_a + demodfreq + 20],
+            # specylim=[0, 4e-23],
+            specyscale="linear",  # 'log', 'linear'
+            # showstd=False,
+            showplt_opt=showplt_opt,
+            return_opt=True,
+        )
+        return specxaxis, spectrum, specxunit, specyunit
+
     def setALP_Field(
         self,
         method: str,  # 'inverse-FFT' 'time-interfer'
@@ -595,9 +661,13 @@ class MagField:
             #     print(f"Contains Inf: {has_inf}")  # Output: True
 
             # inverse FFT method
-            ax_FFT = ax_lineshape * rvs_phase
-            
-            Ba_t = np.fft.ifft(ax_FFT)
+            ax_FFT = Brms * ax_lineshape * rvs_phase
+            length = len(ax_FFT)
+            ax_FFT_pos_neg = np.array(
+                [ax_FFT[length // 2 :], ax_FFT[: length // 2]]
+            ).flatten()
+            del length
+            Ba_t = np.fft.ifft(ax_FFT_pos_neg)
             # if makeplot:
             #     plt.figure()
             #     plt.plot(frequencies, np.abs(np.fft.fft(Ba_t)))
@@ -608,12 +678,12 @@ class MagField:
             # check((len(Bx_amp), len(By_amp), len(dBxdt_amp), len(dBydt_amp)))
             # check(timeLen + 2)
 
-            # Bx_amp, By_amp, dBxdt_amp, dBydt_amp = (
-            #     Bx_amp[1:-1],
-            #     By_amp[1:-1],
-            #     dBxdt_amp[1:-1],
-            #     dBydt_amp[1:-1],
-            # )
+            Bx_amp, By_amp, dBxdt_amp, dBydt_amp = (
+                Bx_amp[1:-1],
+                By_amp[1:-1],
+                dBxdt_amp[1:-1],
+                dBydt_amp[1:-1],
+            )
             # check((len(Bx_amp), len(By_amp), len(dBxdt_amp), len(dBydt_amp)))
 
             Bx = np.outer(Bx_amp, np.array([1, 0, 0]))
@@ -623,41 +693,7 @@ class MagField:
 
             self.B_vec = Bx + By
             self.dBdt_vec = dBxdt + dBydt
-            # if makeplot:
 
-            #     plt.figure()
-            #     plt.plot(
-            #         np.abs(np.fft.fft(self.B_vec[::1, 0] + 1j * self.B_vec[::1, 1]))
-            #     )
-            #     plt.show()
-            # if makeplot:
-            #     plt.figure()
-            #     plt.plot(frequencies, np.abs(ax_FFT))
-            #     plt.title('np.abs(ax_FFT)')
-            #     plt.show()
-            
-            if makeplot:
-                # freqs, singlePSD = stdLIAPSD(
-                #     data_x=self.B_vec[::1, 0],
-                #     data_y=self.B_vec[::1, 1],
-                #     samprate=1 / timeStep,
-                #     demodfreq=demodfreq,
-                # )
-                data_x=Bx_amp
-                data_y=By_amp
-                freqs:np.ndarray = np.fft.fftfreq(
-                    len(data_x), d=timeStep
-                )
-                # check(freqs)
-                plt.figure()
-                plt.plot(freqs)
-                plt.show()
-                bxy = np.fft.ifft(ax_FFT)
-                FFT = np.fft.fft(bxy, norm=None)
-                PSD = np.abs(FFT) ** 2.0
-                plt.figure()
-                plt.scatter(freqs, PSD)
-                plt.show()
             if makeplot:
                 self.B_Stream = LIASignal(
                     name="ALP field gradient",
@@ -742,29 +778,20 @@ class MagField:
             else:
                 ax_sq_lineshape = lineshape
             ax_lineshape = np.sqrt(ax_sq_lineshape)
-            # if makeplot:
-            #     plt.figure()
-            #     plt.plot(ax_lineshape)
-            #     plt.show()
-            # check lineshape sanity
-            # for arr in [lineshape, ax_lineshape]:
-            #     has_nan = np.isnan(arr).any()  # Check for NaN
-            #     has_inf = np.isinf(arr).any()  # Check for Inf
-
-            #     print(f"Contains NaN: {has_nan}")  # Output: True
-            #     print(f"Contains Inf: {has_inf}")  # Output: True
 
             # inverse FFT method
-            ax_FFT = ax_lineshape * rvs_phase
-            Ba_t = np.fft.ifft(ax_FFT)
+            ax_FFT = Brms * ax_lineshape * rvs_phase
+            length = len(ax_FFT)
+            ax_FFT_pos_neg = np.array(
+                [ax_FFT[length // 2 :], ax_FFT[: length // 2]]
+            ).flatten()
+            del length
+
+            Ba_t = np.fft.ifft(ax_FFT_pos_neg)
             Bx_amp, By_amp = np.real(Ba_t), np.imag(Ba_t)
             N = len(ax_FFT)
-            check(N)
-            check(timeLen)
             freq = np.fft.fftfreq(N, timeStep)
-
-            # Y = np.fft.fft(y)
-            dBadt_FFT = 1j * 2 * np.pi * freq * ax_FFT
+            dBadt_FFT = 1j * 2 * np.pi * freq * ax_FFT_pos_neg
             dBadt = np.fft.ifft(dBadt_FFT)
             dBxdt_amp, dBydt_amp = np.real(dBadt), np.imag(dBadt)
 
@@ -777,71 +804,76 @@ class MagField:
             self.dBdt_vec = dBxdt + dBydt
 
             if makeplot:
-                self.B_Stream = LIASignal(
-                    name="ALP field gradient",
-                    device="Simulation",
-                    device_id="Simulation",
-                    filelist=[],
-                    verbose=True,
+                # check(self.B_vec[::1, 0])
+                specxaxis, spectrum0, specxunit, specyunit = self.showTSandPSD(
+                    dataX=self.B_vec[::1, 0],
+                    dataY=self.B_vec[::1, 1],
+                    demodfreq=demodfreq,
+                    samprate=1.0 / timeStep,
+                    showplt_opt=False,
                 )
-                self.B_Stream.attenuation = 0
-                self.B_Stream.filterstatus = "off"
-                self.B_Stream.filter_TC = 0.0
-                self.B_Stream.filter_order = 0
-                self.B_Stream.dmodfreq = demodfreq
-                saveintv = 1
-                self.B_Stream.samprate = 1.0 / timeStep / saveintv
+                specxaxis, spectrum1, specxunit, specyunit = self.showTSandPSD(
+                    dataX=self.dBdt_vec[::1, 0],
+                    dataY=self.dBdt_vec[::1, 1],
+                    demodfreq=demodfreq,
+                    samprate=1.0 / timeStep,
+                    showplt_opt=False,
+                )
+                fig = plt.figure(figsize=(6.0, 4.0), dpi=150)  # initialize a figure
+                gs = gridspec.GridSpec(
+                    nrows=2, ncols=2
+                )  # create grid for multiple figures
+                ax_x = fig.add_subplot(gs[0, 0])
+                ax_y = fig.add_subplot(gs[1, 0])
+                axPSD = fig.add_subplot(gs[:, 1])
 
-                self.B_Stream.dataX = 1 * self.B_vec[::saveintv, 0]  # * \
-                # np.cos(2 * np.pi * self.nu_rot * self.timestamp[0:-1:saveintv])
-                self.B_Stream.dataY = 1 * self.B_vec[::saveintv, 1]
+                ax_x.plot(self.B_vec[:, 0] / np.amax(self.B_vec), label="Bx")
+                ax_x.plot(self.dBdt_vec[:, 0] / np.amax(self.dBdt_vec), label="dBxdt")
 
-                self.B_Stream.GetNoPulsePSD(
-                    windowfunction="Hanning",
-                    # decayfactor=-10,
-                    chunksize=None,  # sec
-                    analysisrange=[0, -1],
-                    getstd=False,
-                    stddev_range=None,
-                    selectshots=[],
-                    verbose=False,
+                ax_y.plot(self.B_vec[:, 1] / np.amax(self.B_vec), label="By")
+                ax_y.plot(self.dBdt_vec[:, 1] / np.amax(self.dBdt_vec), label="dBydt")
+
+                axPSD.plot(
+                    specxaxis,
+                    spectrum0 / np.amax(spectrum0),
+                    label="ALP field gradient PSD",
                 )
-                # self.B_Stream.FitPSD(
-                #     fitfunction="Lorentzian",  # 'Lorentzian' 'dualLorentzian' 'tribLorentzian' 'Gaussian 'dualGaussian' 'auto' 'Polyeven'
-                #     inputfitparas=["auto", "auto", "auto", "auto"],
-                #     smooth=False,
-                #     smoothlevel=1,
-                #     fitrange=["auto", "auto"],
-                #     alpha=0.05,
-                #     getresidual=False,
-                #     getchisq=False,
-                #     verbose=False,
-                # )
-                specxaxis, spectrum, specxunit, specyunit = self.B_Stream.GetSpectrum(
-                    showtimedomain=True,
-                    showfit=True,
-                    showresidual=False,
-                    showlegend=True,  # !!!!!show or not to show legend
-                    spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
-                    ampunit="V",
-                    specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
-                    # specxlim=[nu_a + demodfreq - 5, nu_a + demodfreq + 20],
-                    # specylim=[0, 4e-23],
-                    specyscale="linear",  # 'log', 'linear'
-                    showstd=False,
-                    showplt_opt=True,
-                    return_opt=True,
+                axPSD.plot(
+                    specxaxis,
+                    spectrum1 / np.amax(spectrum1),
+                    label="dBa_dt PSD",
+                    linestyle="--",
                 )
+                axPSD.set_xlabel("")
+                axPSD.set_ylabel("")
+                # ax00.set_xscale('log')
+                # ax00.set_yscale("log")
+                # #############################################################################
+                ax_x.legend()
+                ax_y.legend()
+                axPSD.legend()
+                # #############################################################################
+                fig.suptitle("", wrap=True)
+                plt.tight_layout()
+                plt.show()
 
         if method == "inverse-FFT":
-            setALP_Field_invFFT()
+            # setALP_Field_invFFT()
+            setALP_Field_invFFT_2()
         elif method == "time-interfer":
             setALP_Field_timeIntf()
         else:
             raise ValueError("method not found")
 
-    def plotMagField(self, ax: plt.Axes):
-        return
+    def plotField(self, demodfreq, samprate, showplt_opt):
+        specxaxis, spectrum, specxunit, specyunit = self.showTSandPSD(
+            dataX=self.B_vec[:, 0],
+            dataY=self.B_vec[:, 1],
+            demodfreq=demodfreq,
+            samprate=samprate,
+            showplt_opt=showplt_opt,
+        )
+        return specxaxis, spectrum, specxunit, specyunit
 
 
 class Simulation:
@@ -1936,7 +1968,7 @@ class Simulation:
         Mz_ax.grid()
         # Mz_ax.set_xlabel('time [s]')
         Mz_ax.set_ylabel("")
-        Mz_ax.set_ylim(0, 1)
+        Mz_ax.set_ylim(0, 1.1)
 
         dMxydt_ax.plot(
             self.timeStamp[0:-1:plotintv],
@@ -2287,3 +2319,86 @@ class Simulation:
             getchisq=False,
             verbose=False,
         )
+
+    def compareBandSig(self):
+        self.analyzeTrajectory()
+
+        specxaxis, ALP_signal_spec, specxunit, specyunit = self.trjryStream.GetSpectrum(
+            showtimedomain=True,
+            showfit=True,
+            showresidual=False,
+            showlegend=True,  # !!!!!show or not to show legend
+            spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
+            ampunit="V",
+            specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
+            # specxlim=[self.demodfreq - 0 , self.demodfreq + 20],
+            # specylim=[0, 4e-23],
+            specyscale="linear",  # 'log', 'linear'
+            showstd=False,
+            showplt_opt=False,
+            return_opt=True,
+        )
+
+        specxaxis, BALP_spec, specxunit, specyunit = self.excField.plotField(
+            demodfreq=self.demodfreq, samprate=self.simuRate, showplt_opt=False
+        )
+
+        fig = plt.figure(figsize=(6.0, 4.0), dpi=150)  # initialize a figure
+        gs = gridspec.GridSpec(nrows=1, ncols=1)  # create grid for multiple figures
+
+        ax00 = fig.add_subplot(gs[0, 0])
+        ax00.plot(
+            specxaxis,
+            BALP_spec / np.amax(BALP_spec),
+            label="BALP_spec",
+            linestyle="-",
+            zorder=1
+        )
+        ax00.plot(
+            specxaxis,
+            ALP_signal_spec / np.amax(ALP_signal_spec),  #
+            label="ALP_signal_spec",
+            linestyle="--",
+        )
+        ax00.plot(
+            specxaxis,
+            self.trjryStream.fitcurves[0] / np.amax(self.trjryStream.fitcurves[0]),
+            label=self.trjryStream.fitreport,
+            linestyle="--",
+        )
+        check(self.trjryStream.popt[1])
+        check(self.trjryStream.popt[2])
+        # print('fit linewidth = ', self.trjryStream.popt[1])
+        ax00.set_xlabel("frequency" + specxunit)
+        ax00.set_ylabel(f"PSD")
+        # ax00.set_xscale('log')
+        # ax00.set_yscale('log')
+        ax00.legend()
+        ax00.set_xlim(self.demodfreq - 10, self.demodfreq + 10)
+        # #############################################################################
+        fig.suptitle("", wrap=True)
+        # #############################################################################
+        # # put figure index
+        # letters = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)", "(i)"]
+        # for i, ax in enumerate([ax00, ax10]):
+        #     xleft, xright = ax00.get_xlim()
+        #     ybottom, ytop = ax00.get_ylim()
+        #     ax.text(x=xleft, y=ytop, s=letters[i], ha="right", va="bottom", color="blue")
+        # # ha = 'left' or 'right'
+        # # va = 'top' or 'bottom'
+        # #############################################################################
+        # # put a mark of script information on the figure
+        # # Get the script name and path automatically
+        # script_path = os.path.abspath(__file__)
+        # # Add the annotation to the figure
+        # plt.annotate(
+        #     f"Generated by: {script_path}",
+        #     xy=(0.02, 0.02),
+        #     xycoords="figure fraction",
+        #     fontsize=3,
+        #     color="gray",
+        # )
+        # #############################################################################
+        plt.tight_layout()
+        # plt.savefig('example figure - one-column.png', transparent=False)
+        plt.show()

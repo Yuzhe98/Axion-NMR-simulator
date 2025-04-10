@@ -3535,7 +3535,7 @@ class LIASignal:
         self.residual = None
         self.residualval = None
         self.chisq = None
-        self.fitcurve = []
+        self.fitcurves = []
 
         # analysis range
         ar = [0, len(self.avgPSD)]
@@ -3604,7 +3604,7 @@ class LIASignal:
         # Generate the array of fit curves
         if Function_dict[fitfunction][0] == "Lorentzian":
             self.popt[1] = abs(self.popt[1])
-            self.fitcurve.append(
+            self.fitcurves.append(
                 Lorentzian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[0],
@@ -3616,7 +3616,7 @@ class LIASignal:
         elif Function_dict[fitfunction][0] == "dualLorentzian":
             self.popt[1] = abs(self.popt[1])
             self.popt[4] = abs(self.popt[4])
-            self.fitcurve.append(
+            self.fitcurves.append(
                 Lorentzian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[0],
@@ -3625,7 +3625,7 @@ class LIASignal:
                     self.popt[6] / 2,
                 )
             )
-            self.fitcurve.append(
+            self.fitcurves.append(
                 Lorentzian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[3],
@@ -3634,7 +3634,7 @@ class LIASignal:
                     self.popt[6] / 2,
                 )
             )
-            self.fitcurve.append(
+            self.fitcurves.append(
                 dualLorentzian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[0],
@@ -3650,7 +3650,7 @@ class LIASignal:
             self.popt[1] = abs(self.popt[1])
             self.popt[4] = abs(self.popt[4])
             self.popt[7] = abs(self.popt[7])
-            self.fitcurve.append(
+            self.fitcurves.append(
                 Lorentzian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[0],
@@ -3659,7 +3659,7 @@ class LIASignal:
                     self.popt[9],
                 )
             )
-            self.fitcurve.append(
+            self.fitcurves.append(
                 Lorentzian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[3],
@@ -3668,7 +3668,7 @@ class LIASignal:
                     self.popt[9],
                 )
             )
-            self.fitcurve.append(
+            self.fitcurves.append(
                 Lorentzian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[6],
@@ -3677,7 +3677,7 @@ class LIASignal:
                     self.popt[9],
                 )
             )
-            self.fitcurve.append(
+            self.fitcurves.append(
                 tribLorentzian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[0],
@@ -3693,7 +3693,7 @@ class LIASignal:
                 )
             )
         elif Function_dict[fitfunction][0] == "Gaussian":
-            self.fitcurve.append(
+            self.fitcurves.append(
                 Gaussian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[0],
@@ -3703,7 +3703,7 @@ class LIASignal:
                 )
             )
         elif Function_dict[fitfunction][0] == "dualGaussian":
-            self.fitcurve.append(
+            self.fitcurves.append(
                 Gaussian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[0],
@@ -3712,7 +3712,7 @@ class LIASignal:
                     self.popt[6] / 2,
                 )
             )
-            self.fitcurve.append(
+            self.fitcurves.append(
                 Gaussian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[3],
@@ -3721,7 +3721,7 @@ class LIASignal:
                     self.popt[6] / 2,
                 )
             )
-            self.fitcurve.append(
+            self.fitcurves.append(
                 dualGaussian(
                     self.frequencies[ar[0] : ar[1]],
                     self.popt[0],
@@ -3736,15 +3736,15 @@ class LIASignal:
 
         # Compute residual and residual value.
         if getresidual:
-            self.residual = self.avgPSD[ar[0] : ar[1]] - self.fitcurve[-1]
+            self.residual = self.avgPSD[ar[0] : ar[1]] - self.fitcurves[-1]
             self.residualval = np.sum(abs(self.residual))
 
         # Compute chi square
         # Not sure if this is the correct way to do so, but self.chisq is certainly helpful.
         if getchisq:
             self.chisq = np.sum(
-                (self.avgPSD[ar[0] : ar[1]] - self.fitcurve[-1]) ** 2
-                / abs(self.fitcurve[-1])
+                (self.avgPSD[ar[0] : ar[1]] - self.fitcurves[-1]) ** 2
+                / abs(self.fitcurves[-1])
             )
 
         ############################################################################################
@@ -3858,7 +3858,7 @@ class LIASignal:
         self.residual = None
         self.residualval = None
         self.chisq = None
-        self.fitcurve = []
+        self.fitcurves = []
         ar = [0, len(self.avgPSD)]
         for i in range(len(fitrange)):
             if type(fitrange[i]) == int or type(fitrange[i]) == float:
@@ -3896,17 +3896,17 @@ class LIASignal:
             # student-t value for the dof and confidence level
             tval = scipy.stats.distributions.t.ppf(1.0 - alpha / 2.0, dof)
 
-            self.fitcurve.append(
+            self.fitcurves.append(
                 fitfunction(self.frequencies[ar[0] : ar[1]], self.popt[0])
             )  # self.popt[1]
 
             if getresidual:
-                self.residual = self.avgPSD[ar[0] : ar[1]] - self.fitcurve[-1]
+                self.residual = self.avgPSD[ar[0] : ar[1]] - self.fitcurves[-1]
                 self.residualval = np.sum(abs(self.residual))
             if getchisq:
                 self.chisq = np.sum(
-                    (self.avgPSD[ar[0] : ar[1]] - self.fitcurve[-1]) ** 2
-                    / abs(self.fitcurve[-1])
+                    (self.avgPSD[ar[0] : ar[1]] - self.fitcurves[-1]) ** 2
+                    / abs(self.fitcurves[-1])
                 )
             self.fitreport = f" Fit ({(100 - 100 * alpha):.0f} % confidence level)\n"
             fitresultlist = []
@@ -4888,7 +4888,7 @@ class LIASignal:
             if np.amax(selectshots) + 1 > numofchunk:
                 raise ValueError("np.amax(selectshots) + 1 > numofchunk. ")
             chunk_list = selectshots
-        check(chunk_list)
+        # check(chunk_list)
         # Compute power spectra for selected chunks.
         for i in chunk_list:
             frequencies, singlePSD = stdLIAPSD(
@@ -6398,10 +6398,10 @@ class LIASignal:
             # if to show fit curve and there has been a successful fitting
             if showfit and self.fitflag:
                 # in case there are several fit curves, like dualGaussian
-                for i in range(len(self.fitcurve) - 1):
+                for i in range(len(self.fitcurves) - 1):
                     spec_ax.plot(
                         specxaxis[self.fitrange[0] : self.fitrange[1]],
-                        10 ** (-amppow) * ampfactor * self.fitcurve[i],
+                        10 ** (-amppow) * ampfactor * self.fitcurves[i],
                         "--",
                         c="tab:red",
                         alpha=0.6,
@@ -6409,7 +6409,7 @@ class LIASignal:
                 # plot the fit curve
                 spec_ax.plot(
                     specxaxis[self.fitrange[0] : self.fitrange[1]],
-                    10 ** (-amppow) * ampfactor * self.fitcurve[-1],
+                    10 ** (-amppow) * ampfactor * self.fitcurves[-1],
                     c="tab:red",
                     alpha=0.7,
                     label=self.fitreport,
@@ -6475,7 +6475,7 @@ class LIASignal:
             if showfit and self.fitflag and showresidual:
                 resi_ax.plot(
                     specxaxis,
-                    self.spectrum - 10 ** (-amppow) * ampfactor * self.fitcurve[-1],
+                    self.spectrum - 10 ** (-amppow) * ampfactor * self.fitcurves[-1],
                     label="residual",
                     color="tab:purple",
                 )
@@ -6816,18 +6816,18 @@ class LIASignal:
             )
 
         if showfit and self.fitflag and not inset_zoom:
-            for i in range(len(self.fitcurve) - 1):
+            for i in range(len(self.fitcurves) - 1):
                 spec_ax.plot(
                     specxaxis[self.fitrange[0] : self.fitrange[1]],
-                    10 ** (-amppow) * ampfactor * self.fitcurve[i],
+                    10 ** (-amppow) * ampfactor * self.fitcurves[i],
                     "--",
                     c="tab:red",
                     alpha=0.6,
                 )
-            # print(self.fitcurve[-1].shape())
+            # print(self.fitcurves[-1].shape())
             spec_ax.plot(
                 specxaxis[self.fitrange[0] : self.fitrange[1]],
-                10 ** (-amppow) * ampfactor * self.fitcurve[-1],
+                10 ** (-amppow) * ampfactor * self.fitcurves[-1],
                 c="tab:red",
                 alpha=0.7,
                 label=self.fitreport,
@@ -6890,18 +6890,18 @@ class LIASignal:
 
             plt.plot(specxaxis, self.spectrum)  # plot the spectrum again
 
-            for i in range(len(self.fitcurve) - 1):  # plot the fit curve(s)
+            for i in range(len(self.fitcurves) - 1):  # plot the fit curve(s)
                 plt.plot(
                     specxaxis[self.fitrange[0] : self.fitrange[1]],
-                    10 ** (-amppow) * ampfactor * self.fitcurve[i],
+                    10 ** (-amppow) * ampfactor * self.fitcurves[i],
                     "--",
                     c="tab:red",
                     alpha=0.6,
                 )
-            # print(self.fitcurve[-1].shape())
+            # print(self.fitcurves[-1].shape())
             plt.plot(
                 specxaxis[self.fitrange[0] : self.fitrange[1]],
-                10 ** (-amppow) * ampfactor * self.fitcurve[-1],
+                10 ** (-amppow) * ampfactor * self.fitcurves[-1],
                 c="tab:red",
                 alpha=0.7,
                 label=self.fitreport,
@@ -6988,7 +6988,7 @@ class LIASignal:
         self.fitresultlist = []
         for i in range(len(self.popt)):
             self.fitresultlist.append(ufloat(self.popt[i], tval * self.perr[i]))
-        self.fitcurve = PolyEven_centered(
+        self.fitcurves = PolyEven_centered(
             self.frequencies[ar[0] : ar[1]],
             self.popt[0],
             self.popt[1],
@@ -6998,7 +6998,7 @@ class LIASignal:
             self.popt[5],
         )
         self.residual = np.sum(
-            abs(self.avgPSD[ar[0] : ar[1]] - self.fitcurve)
+            abs(self.avgPSD[ar[0] : ar[1]] - self.fitcurves)
         ) / np.sum(abs(self.avgPSD[ar[0] : ar[1]]))
         self.fitreport = "PolyEven_centered fit (95 % confidence level)\n"
         self.fitreport += "C0 = {:.6u}\n".format(self.fitresultlist[0])
@@ -7030,7 +7030,7 @@ class LIASignal:
         spec_ax.scatter(self.frequencies, self.avgPSD)
         spec_ax.plot(
             self.frequencies[ar[0] : ar[1]],
-            self.fitcurve,
+            self.fitcurves,
             "--",
             c="tab:red",
             alpha=0.7,
