@@ -1,0 +1,17 @@
+{
+  "name": "Haloscope Comparison Container",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind"
+  ],
+  "settings": {
+    "jupyter.jupyterServerType": "local"
+  },
+  "extensions": [
+    "ms-python.python",
+    "ms-toolsai.jupyter"
+  ]
+}
