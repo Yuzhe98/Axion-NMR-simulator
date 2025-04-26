@@ -9,8 +9,8 @@ sys.path.insert(0, os.path.abspath(os.curdir))
 
 import numpy as np
 import time
-from SimuTools import Sample, MagField, Simulation, TTL
-from DataAnalysis import LIASignal
+from SimuTools import Sample, MagField, Simulation, gate
+from DataAnalysis import DualChanSig
 from functioncache import check
 
 import matplotlib.pyplot as plt
@@ -34,7 +34,7 @@ ExampleSample10MHzT = Sample(
 excField = MagField(name="excitation field")  # excitation field in the rotating frame
 excField.nu = 1e6 + 0  # [Hz]
 
-Larmor_freqs = (1e6 + np.arange(-2, 12, 2))
+Larmor_freqs = 1e6 + np.arange(-2, 12, 2)
 # Larmor_freqs = 1e6 + np.arange(10, 12, 2)
 B0z_list = Larmor_freqs / (ExampleSample10MHzT.gyroratio / (2 * np.pi))
 specy_list = []
@@ -80,7 +80,7 @@ for B0z in B0z_list:
         )
         B_vec += simu.excField.B_vec
         dBdt_vec += simu.excField.dBdt_vec
-    
+
     simu.excField.B_vec = B_vec
     simu.excField.dBdt_vec = dBdt_vec
 
@@ -168,7 +168,7 @@ ax00.plot(specxaxis, B1spectrum, label="excitation field")
 for i, spectrum in enumerate(specy_list):
     ax10.plot(
         specxaxis,
-        specy_list[ i],
+        specy_list[i],
         label=f"1 MHz + ({Larmor_freqs[i]-1e6:1.0f} Hz)",
         alpha=0.5,
     )

@@ -1,7 +1,7 @@
 import numpy as np
 import time
-from SimuTools import Sample, MagField, Simulation, TTL
-from DataAnalysis import LIASignal
+from SimuTools import Sample, MagField, Simulation, gate
+from DataAnalysis import DualChanSig
 from functioncache import check
 
 ExampleSample10MHzT = Sample(
@@ -18,7 +18,9 @@ ExampleSample10MHzT = Sample(
     verbose=False,
 )
 
-ALP_Field_grad = MagField(name="ALP field gradient")  # excitation field in the rotating frame
+ALP_Field_grad = MagField(
+    name="ALP field gradient"
+)  # excitation field in the rotating frame
 # excField.nu = 1e6 - 10  # [Hz]
 
 simu = Simulation(
@@ -41,14 +43,15 @@ simu = Simulation(
 tic = time.perf_counter()
 check(simu.demodfreq)
 simu.excField.setALP_Field(
-    method='inverse-FFT',
-        timeStamp=simu.timeStamp,
-        Brms=1e-8,  # RMS amplitude of the pseudo-magnetic field in [T]
-        nu_a=(5),  # frequency in the rotating frame
-        # direction: np.ndarray,  #  = np.array([1, 0, 0])
-        use_stoch=False,
-        demodfreq=simu.demodfreq,
-        makeplot=True)
+    method="inverse-FFT",
+    timeStamp=simu.timeStamp,
+    Brms=1e-8,  # RMS amplitude of the pseudo-magnetic field in [T]
+    nu_a=(5),  # frequency in the rotating frame
+    # direction: np.ndarray,  #  = np.array([1, 0, 0])
+    use_stoch=False,
+    demodfreq=simu.demodfreq,
+    makeplot=True,
+)
 simu.excType = "ALP"
 toc = time.perf_counter()
 print(f"setALP_Field() time consumption = {toc-tic:.3f} s")

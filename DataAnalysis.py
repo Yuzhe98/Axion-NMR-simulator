@@ -2,21 +2,14 @@
 # for NMR data processing
 ##################################################
 
-# import packages
-
-import sys
 import os
 import gc
-import glob
 
-from attr import has
+from attr import dataclass
 
-# import commonly-used functions
-# from functioncache import *
-# print('modify from functioncache import * later')
+
 from functioncache import (
     check,
-    GiveDateandTime,
     record_runtime_YorN,
     Lorentzian,
     estimateLorzfit,
@@ -38,7 +31,6 @@ from functioncache import (
     stdLIAFFT,
     stdPSD,
     stdLIAPSD,
-    DTRC_filter,
     PolyEven,
     plotaxisfmt_ppm2MHz,
     plotaxisfmt_Hz2ppm,
@@ -48,11 +40,8 @@ from functioncache import (
     clear_lines,
 )
 
-# from KeaControl import Kea
-# basic computations
 import numpy as np
-
-import math
+from numpy.typing import NDArray
 
 # plotting
 import matplotlib.pyplot as plt
@@ -78,9 +67,6 @@ import h5py
 # monitor run time
 import time
 from timeit import timeit
-
-# # manage memory and track RAM usage
-# import tracemalloc
 
 from functools import partial
 
@@ -158,16 +144,18 @@ FunctionParas = {
 }
 
 
-# Signal class containing raw data, data-processing functions and processed data
-class LIASignal:
+# Signal class containing 2-channel data, data-processing methods and processed data
+@dataclass
+class DualChanSig:
+    demodfreq: float
+    samprate: float
+    dataX : NDArray[np.float64]
+    dataY: NDArray[np.float64]
     def __init__(
         self,
-        name="LIA signal",
+        name="Dual Channel Signal",
         file=None,
         filelist=None,
-        device="dev4434",
-        device_id="dev4434",
-        demod_index=0,
         verbose=False,
     ):
         """
@@ -211,9 +199,6 @@ class LIASignal:
         """
         # initialize some necessary variables
         self.name = name
-        self.device = device
-        self.device_id = device_id
-        self.demod_index = demod_index
         self.file = file
         self.fitflag = False  # initialize fit flag to False (no fitting or fitting is unsuccessful)
         self.exptype = "Experiment type not specified"  # experiment type.
@@ -293,503 +278,293 @@ class LIASignal:
             print(f"[{self.SortFiles.__name__}] filelist after sorting:")
             print((self.filelist, self.creation_times))
 
-    def LoadStream(
-        self,
-        Keadevice=None,  # Load related information to Keadevice
-        SQDsensor=None,  # Load related information to SQDsensor
-        Expinfo=None,  # Load related information to Expinfo
-        skip_pulsedata=False,
-        skip_timestamp=False,
-        skiprows=3,
-        skip_dataXY=False,
-        verbose=False,
-    ):
-        """
-        Load lock-in amplifier data from single / multiple file(s).
+    # def LoadStream(
+    #     self,
+    #     skip_pulsedata=False,
+    #     skip_timestamp=False,
+    #     skiprows=3,
+    #     skip_dataXY=False,
+    #     verbose=False,
+    # ):
+    #     """
+    #     Load lock-in amplifier data from single / multiple file(s).
 
-        Parameters
-        ----------
-        self : (class) LIAsignal
-            Signal from lock-in amplifier and also the processed data
+    #     Parameters
+    #     ----------
+    #     self : (class) LIAsignal
+    #         Signal from lock-in amplifier and also the processed data
 
-        Keadevice : (class) Kea
-            in KeaControl
+    #     Keadevice : (class) Kea
+    #         in KeaControl
 
-        SQDsensor : (class) SQUID
-            in DataAnalysis
+    #     SQDsensor : (class) SQUID
+    #         in DataAnalysis
 
-        Expinfo : (class) Experiment
-            in LIAControl
+    #     Expinfo : (class) Experiment
+    #         in LIAControl
 
-        verbose : bool
-            Choose True to display processing information. Defaults to False.
+    #     verbose : bool
+    #         Choose True to display processing information. Defaults to False.
 
-        Returns
-        -------
-        Null
+    #     Returns
+    #     -------
+    #     Null
 
-        Examples
-        --------
-        >>>
+    #     Examples
+    #     --------
+    #     >>>
 
-        Referrence
-        --------
-        Null
-        """
+    #     Referrence
+    #     --------
+    #     Null
+    #     """
 
-        self.dataX = []
-        self.dataY = []
-        self.pulsedata = []
+    #     self.dataX = []
+    #     self.dataY = []
+    #     self.pulsedata = []
 
-        def loadstream_DAQ(dataFile):
-            # with h5py.File(singlefile, 'r', driver='core') as dataFile:
-            self.dmodfreq = dataFile[
-                f"{self.device_id:s}/demods/{self.demod_index:d}/dmodfreq"
-            ][0]
-            self.samprate = dataFile[
-                f"{self.device_id:s}/demods/{self.demod_index:d}/samprate"
-            ][0]
-            self.filter_TC = dataFile[
-                f"{self.device_id:s}/demods/{self.demod_index:d}/filter_TC"
-            ][0]
-            self.filter_order = dataFile[
-                f"{self.device_id:s}/demods/{self.demod_index:d}/filter_order"
-            ][0]
-            if not skip_dataXY:
-                self.dataX += list(
-                    dataFile[f"{self.device_id:s}/demods/{self.demod_index:d}/samplex"]
-                )
-                self.dataY += list(
-                    dataFile[f"{self.device_id:s}/demods/{self.demod_index:d}/sampley"]
-                )
-                # check(sys.getsizeof(self.dataX))
-                # check(sys.getsizeof(self.dataY))
+    #     def loadstream_DAQ(dataFile):
+    #         # with h5py.File(singlefile, 'r', driver='core') as dataFile:
+    #         self.demodfreq = dataFile[
+    #             f"{self.device_id:s}/demods/{self.demod_index:d}/dmodfreq"
+    #         ][0]
+    #         self.samprate = dataFile[
+    #             f"{self.device_id:s}/demods/{self.demod_index:d}/samprate"
+    #         ][0]
+    #         self.filter_TC = dataFile[
+    #             f"{self.device_id:s}/demods/{self.demod_index:d}/filter_TC"
+    #         ][0]
+    #         self.filter_order = dataFile[
+    #             f"{self.device_id:s}/demods/{self.demod_index:d}/filter_order"
+    #         ][0]
+    #         if not skip_dataXY:
+    #             self.dataX += list(
+    #                 dataFile[f"{self.device_id:s}/demods/{self.demod_index:d}/samplex"]
+    #             )
+    #             self.dataY += list(
+    #                 dataFile[f"{self.device_id:s}/demods/{self.demod_index:d}/sampley"]
+    #             )
+    #             # check(sys.getsizeof(self.dataX))
+    #             # check(sys.getsizeof(self.dataY))
 
-            if not skip_pulsedata:
-                self.pulsedata += list(
-                    dataFile[f"{self.device_id:s}/demods/{self.demod_index:d}/auxin0"]
-                )
+    #         if not skip_pulsedata:
+    #             self.pulsedata += list(
+    #                 dataFile[f"{self.device_id:s}/demods/{self.demod_index:d}/auxin0"]
+    #             )
 
-            if not skip_timestamp:
-                self.timestamp = np.linspace(
-                    start=0,
-                    stop=len(self.dataX) / self.samprate,
-                    num=len(self.dataX),
-                    endpoint=False,
-                    dtype=float,
-                )
+    #         if not skip_timestamp:
+    #             self.timestamp = np.linspace(
+    #                 start=0,
+    #                 stop=len(self.dataX) / self.samprate,
+    #                 num=len(self.dataX),
+    #                 endpoint=False,
+    #                 dtype=float,
+    #             )
 
-            if "Expinfo" in dataFile.keys() and Expinfo is not None:
-                Expinfo.name = dataFile[f"Expinfo/name"][0]
-                Expinfo.dateandtime = dataFile[f"Expinfo/dateandtime"][0]
-                Expinfo.exptype = dataFile[f"Expinfo/exptype"][0]
-                self.exptype = dataFile[f"Expinfo/exptype"][0]
+    #         if "Expinfo" in dataFile.keys() and Expinfo is not None:
+    #             Expinfo.name = dataFile[f"Expinfo/name"][0]
+    #             Expinfo.dateandtime = dataFile[f"Expinfo/dateandtime"][0]
+    #             Expinfo.exptype = dataFile[f"Expinfo/exptype"][0]
+    #             self.exptype = dataFile[f"Expinfo/exptype"][0]
 
-            if "Keadevice" in dataFile.keys() and Keadevice is not None:
-                Keadevice.name = dataFile[f"Keadevice/name"][0]
-                Keadevice.B1freq = dataFile[f"Keadevice/B1freq"][0]
-                Keadevice.pulseamp = dataFile[f"Keadevice/pulseamp"][0]
-                Keadevice.pulsedur = dataFile[f"Keadevice/pulsedur"][0]
+    #         if "Keadevice" in dataFile.keys() and Keadevice is not None:
+    #             Keadevice.name = dataFile[f"Keadevice/name"][0]
+    #             Keadevice.B1freq = dataFile[f"Keadevice/B1freq"][0]
+    #             Keadevice.pulseamp = dataFile[f"Keadevice/pulseamp"][0]
+    #             Keadevice.pulsedur = dataFile[f"Keadevice/pulsedur"][0]
 
-            if "SQDsensor" in dataFile.keys():
-                if SQDsensor is not None:
-                    SQDsensor.name = dataFile[f"SQDsensor/name"][0]
-                    SQDsensor.Mf = dataFile[f"SQDsensor/Mf"][0]
-                    SQDsensor.Rf = dataFile[f"SQDsensor/Rf"][0]
-                    SQDsensor.attenuation = dataFile[f"SQDsensor/attenuation"][0]
-                self.y = dataFile[f"SQDsensor/Mf"][0]
-                self.SQD_Rf = dataFile[f"SQDsensor/Rf"][0]
-                self.attenuation = dataFile[f"SQDsensor/attenuation"][0]
+    #         if "SQDsensor" in dataFile.keys():
+    #             if SQDsensor is not None:
+    #                 SQDsensor.name = dataFile[f"SQDsensor/name"][0]
+    #                 SQDsensor.Mf = dataFile[f"SQDsensor/Mf"][0]
+    #                 SQDsensor.Rf = dataFile[f"SQDsensor/Rf"][0]
+    #                 SQDsensor.attenuation = dataFile[f"SQDsensor/attenuation"][0]
+    #             self.y = dataFile[f"SQDsensor/Mf"][0]
+    #             self.SQD_Rf = dataFile[f"SQDsensor/Rf"][0]
+    #             self.attenuation = dataFile[f"SQDsensor/attenuation"][0]
 
-        def loadstream_UI(dataFile):
-            self.dataX += list(
-                dataFile[
-                    f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample/x"
-                ][:]
-            )
-            self.dataY += list(
-                dataFile[
-                    f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample/y"
-                ][:]
-            )
-            # self.pulsedata += list(dataFile[f'000/{self.device_id:s}/demods/{self.demod_index:d}/sample/auxin0'][:])
+    #     def loadstream_UI(dataFile):
+    #         self.dataX += list(
+    #             dataFile[
+    #                 f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample/x"
+    #             ][:]
+    #         )
+    #         self.dataY += list(
+    #             dataFile[
+    #                 f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample/y"
+    #             ][:]
+    #         )
+    #         # self.pulsedata += list(dataFile[f'000/{self.device_id:s}/demods/{self.demod_index:d}/sample/auxin0'][:])
 
-            self.dmodfreq = dataFile[
-                f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample/frequency"
-            ][0]
-            self.samprate = dataFile[
-                f"000/{self.device_id:s}/demods/{self.demod_index:d}/rate/value"
-            ][0]
-            self.filter_TC = dataFile[
-                f"000/{self.device_id:s}/demods/{self.demod_index:d}/timeconstant/value"
-            ][0]
-            self.filter_order = dataFile[
-                f"000/{self.device_id:s}/demods/{self.demod_index:d}/order/value"
-            ][0]
-            if not skip_timestamp:
-                self.timestamp = np.linspace(
-                    start=0,
-                    stop=len(self.dataX) / self.samprate,
-                    num=len(self.dataX),
-                    endpoint=False,
-                    dtype=float,
-                )
+    #         self.demodfreq = dataFile[
+    #             f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample/frequency"
+    #         ][0]
+    #         self.samprate = dataFile[
+    #             f"000/{self.device_id:s}/demods/{self.demod_index:d}/rate/value"
+    #         ][0]
+    #         self.filter_TC = dataFile[
+    #             f"000/{self.device_id:s}/demods/{self.demod_index:d}/timeconstant/value"
+    #         ][0]
+    #         self.filter_order = dataFile[
+    #             f"000/{self.device_id:s}/demods/{self.demod_index:d}/order/value"
+    #         ][0]
+    #         if not skip_timestamp:
+    #             self.timestamp = np.linspace(
+    #                 start=0,
+    #                 stop=len(self.dataX) / self.samprate,
+    #                 num=len(self.dataX),
+    #                 endpoint=False,
+    #                 dtype=float,
+    #             )
 
-        def loadstream_DAQ_continuous(dataFile):
-            self.dataX += list(
-                dataFile[
-                    f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample.x/value"
-                ][:]
-            )
-            self.dataY += list(
-                dataFile[
-                    f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample.y/value"
-                ][:]
-            )
-            self.pulsedata += list(
-                dataFile[
-                    f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample.auxin0/value"
-                ][:]
-            )
+    #     def loadstream_DAQ_continuous(dataFile):
+    #         self.dataX += list(
+    #             dataFile[
+    #                 f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample.x/value"
+    #             ][:]
+    #         )
+    #         self.dataY += list(
+    #             dataFile[
+    #                 f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample.y/value"
+    #             ][:]
+    #         )
+    #         self.pulsedata += list(
+    #             dataFile[
+    #                 f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample.auxin0/value"
+    #             ][:]
+    #         )
 
-        def loadstream_NMRKineticSimu(dataFile):
-            self.testtimestamp = dataFile["NMRKineticSimu/demods/0/timestamp"]
-            # check(self.testtimestamp)
-            # check(self.testtimestamp[0])
-            self.dmodfreq = dataFile["NMRKineticSimu/demods/0/dmodfreq"][0]
-            self.samprate = dataFile["NMRKineticSimu/demods/0/samprate"][0]
-            self.filter_TC = dataFile["NMRKineticSimu/demods/0/filter_TC"][0]
-            self.filter_order = dataFile["NMRKineticSimu/demods/0/filter_order"][0]
-            # check(self.dmodfreq)
-            # check(self.samprate)
-            self.dataX += list(dataFile["NMRKineticSimu/demods/0/samplex"])
-            self.dataY += list(dataFile["NMRKineticSimu/demods/0/sampley"])
+    #     def loadstream_NMRKineticSimu(dataFile):
+    #         self.testtimestamp = dataFile["NMRKineticSimu/demods/0/timestamp"]
+    #         # check(self.testtimestamp)
+    #         # check(self.testtimestamp[0])
+    #         self.demodfreq = dataFile["NMRKineticSimu/demods/0/dmodfreq"][0]
+    #         self.samprate = dataFile["NMRKineticSimu/demods/0/samprate"][0]
+    #         self.filter_TC = dataFile["NMRKineticSimu/demods/0/filter_TC"][0]
+    #         self.filter_order = dataFile["NMRKineticSimu/demods/0/filter_order"][0]
+    #         # check(self.demodfreq)
+    #         # check(self.samprate)
+    #         self.dataX += list(dataFile["NMRKineticSimu/demods/0/samplex"])
+    #         self.dataY += list(dataFile["NMRKineticSimu/demods/0/sampley"])
 
-        def loadstream_csv():
-            self.exptype = "Pulsed-NMR"
-            data = np.loadtxt(singlefile, delimiter=",")
-            self.timestamp = 1e-6 * np.array(data[:, 0], dtype=np.float64)
-            self.dataX += list(1e-6 * data[:, 1])
-            self.dataY += list(1e-6 * data[:, 2])
-            del data
+    #     def loadstream_csv():
+    #         self.exptype = "Pulsed-NMR"
+    #         data = np.loadtxt(singlefile, delimiter=",")
+    #         self.timestamp = 1e-6 * np.array(data[:, 0], dtype=np.float64)
+    #         self.dataX += list(1e-6 * data[:, 1])
+    #         self.dataY += list(1e-6 * data[:, 2])
+    #         del data
 
-            self.dmodfreq = 0.0
-            self.samprate = 1.0 / abs(self.timestamp[1] - self.timestamp[0])
-            self.filterstatus = "off"
-            self.filter_TC = 0.0
-            self.filter_order = 0.0
-            self.attenuation = 0.0
-            self.acq_arr = np.array(
-                [[0], [len(self.dataY)]], dtype=np.int64
-            ).transpose()
+    #         self.demodfreq = 0.0
+    #         self.samprate = 1.0 / abs(self.timestamp[1] - self.timestamp[0])
+    #         self.filterstatus = "off"
+    #         self.filter_TC = 0.0
+    #         self.filter_order = 0.0
+    #         self.attenuation = 0.0
+    #         self.acq_arr = np.array(
+    #             [[0], [len(self.dataY)]], dtype=np.int64
+    #         ).transpose()
 
-        def loadstream_txt():
-            self.exptype = "Pulsed-NMR"
-            # TODO add the function to count text lines in the data file
-            data = np.loadtxt(singlefile, skiprows=skiprows)
-            self.dataX = data[:, 0]
-            self.dataY = data[:, 1]
-            del data
-            self.pulsedata = np.zeros(len(self.dataY))
+    #     def loadstream_txt():
+    #         self.exptype = "Pulsed-NMR"
+    #         # TODO add the function to count text lines in the data file
+    #         data = np.loadtxt(singlefile, skiprows=skiprows)
+    #         self.dataX = data[:, 0]
+    #         self.dataY = data[:, 1]
+    #         del data
+    #         self.pulsedata = np.zeros(len(self.dataY))
 
-            self.dmodfreq = 0.0
-            # self.samprate = 1. / abs(self.timestamp[1]-self.timestamp[0])
-            self.filterstatus = "off"
-            self.filter_TC = 0.0
-            self.filter_order = 0.0
-            self.attenuation = 0.0
-            self.acq_arr = np.array(
-                [[0], [len(self.dataY)]], dtype=np.int64
-            ).transpose()
+    #         self.demodfreq = 0.0
+    #         # self.samprate = 1. / abs(self.timestamp[1]-self.timestamp[0])
+    #         self.filterstatus = "off"
+    #         self.filter_TC = 0.0
+    #         self.filter_order = 0.0
+    #         self.attenuation = 0.0
+    #         self.acq_arr = np.array(
+    #             [[0], [len(self.dataY)]], dtype=np.int64
+    #         ).transpose()
 
-        loadstream_methods = {
-            "DAQ_record": loadstream_DAQ,
-            "UI": loadstream_UI,
-            "DAQ_continuous": loadstream_DAQ_continuous,
-            "NMRKineticSimu": loadstream_NMRKineticSimu,
-            "Kea_csv": loadstream_csv,
-            "TecMag_txt": loadstream_txt,
-        }  #
+    #     loadstream_methods = {
+    #         "DAQ_record": loadstream_DAQ,
+    #         "UI": loadstream_UI,
+    #         "DAQ_continuous": loadstream_DAQ_continuous,
+    #         "NMRKineticSimu": loadstream_NMRKineticSimu,
+    #         "Kea_csv": loadstream_csv,
+    #         "TecMag_txt": loadstream_txt,
+    #     }  #
 
-        for singlefile in self.filelist:
-            if verbose:
-                print("Loading data from " + singlefile)
-            if singlefile[-3:] == ".h5":
-                with h5py.File(
-                    singlefile, "r", driver="core"
-                ) as dataFile:  # h5py loading method
-                    # check recording method
-                    if verbose:
-                        check(dataFile.keys())
-                    # check(dataFile)
-                    # check(sys.getsizeof(dataFile))
-                    if (
-                        f"{self.device_id:s}/demods/{self.demod_index:d}/samplex"
-                        in dataFile.keys()
-                    ):
-                        recordmethod = "DAQ_record"
-                    elif (
-                        f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample/x"
-                        in dataFile.keys()
-                    ):
-                        recordmethod = "UI"
-                    elif (
-                        f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample.x/value"
-                        in dataFile.keys()
-                    ):
-                        recordmethod = "DAQ_continuous"
-                    elif "NMRKineticSimu/demods/0" in dataFile.keys():
-                        recordmethod = "NMRKineticSimu"
-                    else:
-                        raise ValueError(
-                            "LoadStream() cannot figure out the recording method"
-                        )
-                    if verbose:
-                        print("recordmethod: ", recordmethod)
-                    # load stream
-                    loadstream_methods[recordmethod](dataFile)
-                    if verbose:
-                        print("Loading Finished")
-            elif singlefile[-4:] == ".csv":
-                recordmethod = "Kea_csv"
-                if verbose:
-                    print("recordmethod: ", recordmethod)
-                loadstream_methods[recordmethod]()
-            elif singlefile[-4:] == ".tnt":
-                recordmethod = "TecMag_tnt"
-                # tnt file is not supported for now
-            elif singlefile[-4:] == ".txt":
-                recordmethod = "TecMag_txt"
-                if verbose:
-                    print("Reading txt file")
-                # loadstream_txt()
-                loadstream_methods[recordmethod]()
-            else:
-                raise ValueError("file type not in .h5, .csv, .tnt nor .txt")
+    #     for singlefile in self.filelist:
+    #         if verbose:
+    #             print("Loading data from " + singlefile)
+    #         if singlefile[-3:] == ".h5":
+    #             with h5py.File(
+    #                 singlefile, "r", driver="core"
+    #             ) as dataFile:  # h5py loading method
+    #                 # check recording method
+    #                 if verbose:
+    #                     check(dataFile.keys())
+    #                 # check(dataFile)
+    #                 # check(sys.getsizeof(dataFile))
+    #                 if (
+    #                     f"{self.device_id:s}/demods/{self.demod_index:d}/samplex"
+    #                     in dataFile.keys()
+    #                 ):
+    #                     recordmethod = "DAQ_record"
+    #                 elif (
+    #                     f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample/x"
+    #                     in dataFile.keys()
+    #                 ):
+    #                     recordmethod = "UI"
+    #                 elif (
+    #                     f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample.x/value"
+    #                     in dataFile.keys()
+    #                 ):
+    #                     recordmethod = "DAQ_continuous"
+    #                 elif "NMRKineticSimu/demods/0" in dataFile.keys():
+    #                     recordmethod = "NMRKineticSimu"
+    #                 else:
+    #                     raise ValueError(
+    #                         "LoadStream() cannot figure out the recording method"
+    #                     )
+    #                 if verbose:
+    #                     print("recordmethod: ", recordmethod)
+    #                 # load stream
+    #                 loadstream_methods[recordmethod](dataFile)
+    #                 if verbose:
+    #                     print("Loading Finished")
+    #         elif singlefile[-4:] == ".csv":
+    #             recordmethod = "Kea_csv"
+    #             if verbose:
+    #                 print("recordmethod: ", recordmethod)
+    #             loadstream_methods[recordmethod]()
+    #         elif singlefile[-4:] == ".tnt":
+    #             recordmethod = "TecMag_tnt"
+    #             # tnt file is not supported for now
+    #         elif singlefile[-4:] == ".txt":
+    #             recordmethod = "TecMag_txt"
+    #             if verbose:
+    #                 print("Reading txt file")
+    #             # loadstream_txt()
+    #             loadstream_methods[recordmethod]()
+    #         else:
+    #             raise ValueError("file type not in .h5, .csv, .tnt nor .txt")
 
-        self.dataX = np.array(self.dataX, dtype=np.float64).flatten()
-        self.dataY = np.array(self.dataY, dtype=np.float64).flatten()
-        self.pulsedata = np.array(self.pulsedata, dtype=np.float64).flatten()
-        self.chanstd_flag = False
+    #     self.dataX = np.array(self.dataX, dtype=np.float64).flatten()
+    #     self.dataY = np.array(self.dataY, dtype=np.float64).flatten()
+    #     self.pulsedata = np.array(self.pulsedata, dtype=np.float64).flatten()
+    #     self.chanstd_flag = False
 
-        if self.attenuation is None:
-            print(
-                "Please remember to specify attenuation of the signal before it went to LIA. "
-            )
+    #     if self.attenuation is None:
+    #         print(
+    #             "Please remember to specify attenuation of the signal before it went to LIA. "
+    #         )
 
-        # self.GetMeas
-        # if verbose:
-        #     print('after flattening')
-        #     print('self.dataX.shape', self.dataX.shape)
-        #     print('self.dataY.shape', self.dataY.shape)
-        #     print('self.pulsedata.shape', self.pulsedata.shape)
-
-    def CreateArtificialStream(
-        self,
-        dmodfreq: float = 1e6,
-        samprate: float = 13e3,
-        total_dur: float = 10,
-        skip_timestamp: bool = True,
-        year=None,
-        month=None,
-        day=None,
-        time_hms=None,  # Use UTC time!
-        # example
-        # year=2024, month=9, day=10, time='14:35:16.235812',
-        verbose: bool = False,
-    ):
-        """
-        Create an artificial lock-in amplifier signal stream for, e.g. Monte-Carlo simulation.
-        The signal is random noise ~ N(0, 1), normally distributed.
-
-
-        Parameters
-        ----------
-
-        if no time is specified, then current time will be used.
-
-        """
-        self.dmodfreq = dmodfreq
-        self.samprate = samprate
-        self.total_dur = total_dur
-        self.freq_resol = 1.0 / self.total_dur
-        self.data_len = int(samprate * total_dur)
-        self.dataX = norm.rvs(loc=0.0, scale=1.0 / np.sqrt(2.0), size=self.data_len)
-        self.dataY = norm.rvs(loc=0.0, scale=1.0 / np.sqrt(2.0), size=self.data_len)
-        self.pulsedata = []
-        self.filterstatus = "off"
-        self.filter_TC = 1
-        self.filter_order = 0
-        if not skip_timestamp:
-            self.timestamp = np.linspace(
-                start=0.0,
-                stop=len(self.dataX) / self.samprate,
-                num=len(self.dataX),
-                endpoint=False,
-                dtype=float,
-            )
-        self.SQD_Mf = 1.0
-        self.SQD_Rf = 1.0
-        self.attenuation = 0.0
-        self.chanstd_flag = False
-
-        if (year or month or day or time_hms) is None:
-            time_DMmeasure = Time.now()  # UTC time
-            # example of the astropy.time.Time.now() return value
-            # 2024-09-11 14:27:44.732284
-            print(
-                f"[{self.CreateArtificialStream.__name__}] no date and time input provided. using current date and time: {time_DMmeasure}"
-            )
-            # Extract the year, month, day, and time
-            self.year = time_DMmeasure.datetime.year
-            self.month = time_DMmeasure.datetime.month
-            self.day = time_DMmeasure.datetime.day
-            self.timehms = time_DMmeasure.datetime.time()
-        else:
-            time_DMmeasure = f"{year}-{month}-{day}T{time_hms}"
-        self.time_DMmeasure = time_DMmeasure
-        del time_DMmeasure
-        if verbose:
-            print(f"time input: {self.time_DMmeasure}")
-
-        self.timeastro = Time(self.time_DMmeasure, format="isot", scale="utc")
-
-    def DTRC_filter(
-        self,
-        TC: float,
-        order: int,
-    ):
-        assert hasattr(self, "dataX")
-        assert hasattr(self, "dataY")
-        self.dataX = DTRC_filter(self.dataX, samprate=self.samprate, TC=TC, order=order)
-        self.dataY = DTRC_filter(self.dataX, samprate=self.samprate, TC=TC, order=order)
-
-        if hasattr(self, "timestamp") and self.timestamp is not None:
-            self.timestamp = self.timestamp[: (-1) * order]
-
-        self.filterstatus = "on"
-        self.filter_TC = TC
-        self.filter_order = order
-
-    def GetStreamDurs(self, verbose: bool = False):
-        """
-        Get the durations and the total duration of streams in the LIASignal.
-        (self.MeasDur_list and self.total_dur)
-        Usually it is not necessary to remember execute this function
-        since it is always executed by GetStreamTimes().
-        """
-        self.MeasDur_list = []  # measurement durations in [s]
-        for singlefile in self.filelist:
-            if verbose:
-                print("Loading measurement duration from " + singlefile)
-            if singlefile[-3:] == ".h5":
-                with h5py.File(
-                    singlefile, "r", driver="core"
-                ) as dataFile:  # h5py loading method
-                    # check recording method
-                    # if verbose:
-                    #     check(dataFile.keys())
-                    # check(dataFile)
-                    if (
-                        f"{self.device_id:s}/demods/{self.demod_index:d}/samplex"
-                        in dataFile.keys()
-                    ):
-                        recordmethod = "DAQ_record"
-                    elif (
-                        f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample/x"
-                        in dataFile.keys()
-                    ):
-                        recordmethod = "UI"
-                    elif (
-                        f"000/{self.device_id:s}/demods/{self.demod_index:d}/sample.x/value"
-                        in dataFile.keys()
-                    ):
-                        recordmethod = "DAQ_continuous"
-                    elif "NMRKineticSimu/demods/0" in dataFile.keys():
-                        recordmethod = "NMRKineticSimu"
-                    else:
-                        raise ValueError(
-                            "LoadStream() cannot figure out the recording method"
-                        )
-                    # if verbose:
-                    #     print('recordmethod: ', recordmethod)
-
-                    if recordmethod == "DAQ_record":
-                        self.samprate = dataFile[
-                            f"{self.device_id:s}/demods/{self.demod_index:d}/samprate"
-                        ][0]
-                        self.MeasDur_list.append(
-                            len(
-                                (
-                                    dataFile[
-                                        f"{self.device_id:s}/demods/{self.demod_index:d}/samplex"
-                                    ]
-                                )
-                            )
-                            / self.samprate
-                        )
-                    elif recordmethod == "UI":
-                        self.samprate = dataFile[
-                            f"000/{self.device_id:s}/demods/{self.demod_index:d}/rate/value"
-                        ][0]
-                        self.MeasDur_list.append(len(self.dataX) / self.samprate)
-                    elif recordmethod == "NMRKineticSimu":
-                        self.samprate = dataFile["NMRKineticSimu/demods/0/samprate"][0]
-                        self.MeasDur_list.append(
-                            len(dataFile["NMRKineticSimu/demods/0/samplex"])
-                            / self.samprate
-                        )
-                    else:
-                        raise ValueError("cannot find recording method")
-                    if verbose:
-                        print("Loading Finished")
-            elif singlefile[-4:] == ".csv":
-                dataFile = np.loadtxt(singlefile, delimiter=",")
-                self.timestamp = np.array(dataFile[:, 0], dtype=np.float64)
-                self.samprate = 1e6 / abs(self.timestamp[1] - self.timestamp[0])
-                self.MeasDur_list.append(len(dataFile[:, 2]) / self.samprate)
-            else:
-                raise ValueError("file type not in .h5 nor .csv")
-
-        self.total_dur = 0.0
-        for dur in self.MeasDur_list:
-            self.total_dur += dur
-
-        if verbose:
-            print(f"[{self.GetStreamDurs.__name__}] Finished. ")
-            check(self.MeasDur_list)
-
-    # @record_runtime_YorN(RECORD_RUNTIME)
-    def GetStreamTimes(self, verbose: bool = False):
-        # self.SortFiles(verbose=verbose)
-
-        self.GetStreamDurs(verbose)
-        # Calculate stop times
-        stop_times = [
-            creation_time + timedelta(seconds=meas_duration)
-            for creation_time, meas_duration in zip(
-                self.creation_times, self.MeasDur_list
-            )
-        ]
-
-        # # Convert stop times to astropy Time objects
-        self.stop_times = [
-            Time(stop_time, format="datetime", scale="utc") for stop_time in stop_times
-        ]
-        del stop_times
-
-        # Print results
-        if verbose:
-            print("Stop Times: ", self.stop_times)
-
-        self.StreamStart = self.creation_times[0]
-        self.StreamStop = self.stop_times[-1]
-        if verbose:
-            check(self.StreamStart)
-            check(self.StreamStop)
-            print(f"total measurement duration: {self.total_dur}. ")
-
-        self.timeastro = self.creation_times[0]
+    #     # self.GetMeas
+    #     # if verbose:
+    #     #     print('after flattening')
+    #     #     print('self.dataX.shape', self.dataX.shape)
+    #     #     print('self.dataY.shape', self.dataY.shape)
+    #     #     print('self.pulsedata.shape', self.pulsedata.shape)
 
     def displayTS(
         self,
@@ -1064,14 +839,14 @@ class LIASignal:
                 self.GetNoPulseFFT()
 
         if showFFTrealhist:
-            GaussianHistPlot(self.avgFFT.real, title="FFT real", ax=FFTreal_hist_ax)
+            GaussianHistPlot(self.FFT.real, title="FFT real", ax=FFTreal_hist_ax)
         if showFFTimghist:
-            GaussianHistPlot(self.avgFFT.imag, title="FFT imag", ax=FFTimag_hist_ax)
+            GaussianHistPlot(self.FFT.imag, title="FFT imag", ax=FFTimag_hist_ax)
 
         def plotPSD(x, y, title, ax: plt.Axes, freqRangeforHist):
             if freqRangeforHist is None:
                 r0 = 0
-                r1 = len(self.avgPSD)
+                r1 = len(self.PSD)
             else:
                 r0 = np.argmin(abs(self.frequencies - freqRangeforHist[0]))
                 r1 = np.argmin(abs(self.frequencies - freqRangeforHist[1]))
@@ -1179,12 +954,7 @@ class LIASignal:
             )
 
         if showPSDhist:
-            # if not hasattr(self, 'avgFFT'):
-            #     print("Warning: LIASignal object does not have the attribute 'avgFFT'. "\
-            #           "Now self.GetFFT() is executed for generating FFT "\
-            #           "for the histogram. ")
-            #     self.GetNoPulseFFT()
-            if not hasattr(self, "avgPSD"):
+            if not hasattr(self, "PSD"):
                 print(
                     "Warning: LIASignal object does not have the attribute 'avgPSD'. "
                     "Now self.GetNoPulsePSD() is executed for generating a power spectrum "
@@ -1194,7 +964,7 @@ class LIASignal:
 
             plotPSD(
                 x=self.frequencies,
-                y=self.avgPSD,
+                y=self.PSD,
                 title="PSD",
                 ax=PSD_ax,
                 freqRangeforHist=freqRangeforHist,
@@ -1202,13 +972,13 @@ class LIASignal:
 
             if freqRangeforHist is None:
                 r0 = 0
-                r1 = len(self.avgPSD)
+                r1 = len(self.PSD)
             else:
                 r0 = np.argmin(abs(self.frequencies - freqRangeforHist[0]))
                 r1 = np.argmin(abs(self.frequencies - freqRangeforHist[1]))
             ChisqHistPlot(
                 ax=PSD_hist_ax,
-                data=self.avgPSD[r0:r1] / np.std(self.avgPSD[r0:r1]),
+                data=self.PSD[r0:r1] / np.std(self.PSD[r0:r1]),
                 title="Histogram of the normalized PSD",
                 thres=excessThres,
             )
@@ -1232,252 +1002,6 @@ class LIASignal:
             PSD_hist_ax,
         )
 
-    def tsCheckDrift(
-        self,
-        checkX: bool = True,
-        checkY: bool = True,
-        # removeDrift:bool=False,
-        makeplot: bool = False,
-        verbose: bool = True,
-    ):
-        """
-        check difts in the time-series
-        """
-        if len(self.dataX) < 100:
-            clear_lines()
-            print(
-                f"[{self.tsCheckDrift.__name__}] Warning: len(self.dataX) = {len(self.dataX)}. array may be too short for drift diagnostics. "
-            )
-
-        self.tsHasBeenModified_flag = False
-
-        chunklen = len(self.dataX) // 4
-        chunk_list = []
-        dataset_drift_list = []
-        for i in range(4):
-            chunk_list.append(
-                [(i) * chunklen, min((i + 1) * chunklen, len(self.dataX))]
-            )
-
-        def check_iter(data):
-            drift = False
-            for i, chunk_i in enumerate(chunk_list):
-                for j, chunk_j in enumerate(chunk_list):
-                    if i < j:
-                        dataset_drift = checkDrift(
-                            data[chunk_i[0] : chunk_i[1]], data[chunk_j[0] : chunk_j[1]]
-                        )
-                        # if dataset_drift and makeplot:
-                        #     checkDrift(
-                        #         data[chunk_i[0]:chunk_i[1]],
-                        #         data[chunk_j[0]:chunk_j[1]],
-                        #         makeplot=makeplot)
-                        dataset_drift_list.append(dataset_drift)
-                        drift = drift or dataset_drift
-            return drift
-
-        drift_X, drift_Y = False, False
-        if checkX:
-            drift_X = check_iter(self.dataX)
-        if checkY:
-            drift_Y = check_iter(self.dataY)
-
-        if True in dataset_drift_list:  # if there is a drift
-            self.tsHasDrift_flag = True
-            clear_lines()
-            print(f"data {self.filelist} has drift. ")
-            # sys.stdout.flush()
-        else:  # if there is no drift
-            self.tsHasDrift_flag = False
-
-        if makeplot:
-            # self.GetSpectrum(showtimedomain=True, showfreqdomain=False)
-            self.displayTS(
-                showpulsedata=False,
-                showchanX=True,
-                showchanY=True,
-                plotrate=None,  # in [Hz]. Default to None
-                # maxlen=int(1e7),
-                verbose=False,
-            )
-
-        # if self.tsHasDrift_flag and removeDrift:
-        #     if verbose:
-        #         print(f'{self.??.__name__} is removing the drift in the time series. ')
-        #     self.tsHasDrift_flag = False
-
-        if makeplot:
-            pass
-
-        if checkX and checkY:
-            return [drift_X, drift_Y]
-
-    def tsCheckJump(
-        self,
-        threshold_in_std: float = 5,
-        checkX: bool = True,
-        checkY: bool = True,
-        makeplot: bool = False,
-        verbose: bool = False,
-    ):
-        """
-        check jumps in the time series
-        """
-        # better to check drifts before checking jumps so that the standard deviation
-        # is of value of reference
-        # if verbose:
-        #     print(f'{self.tsCheckJump.__name__} is working. ')
-        self.dataXmean, self.dataXstd = np.mean(self.dataX), np.std(self.dataX)
-        self.dataYmean, self.dataYstd = np.mean(self.dataY), np.std(self.dataY)
-
-        def checkJump(array, mean, std):
-            std_list = []
-            if not isinstance(array, np.ndarray):
-                array = np.array(array)
-            Jumps_indices = list(
-                np.where(np.abs(array - mean) > threshold_in_std * std)[0]
-            )
-            if verbose and len(Jumps_indices) > 0:
-                # clear_lines()
-                # print(f'{self.tsCheckJump.__name__}: ' +
-                #       f'data {self.filelist} {len(Jumps_indices):d} jump(s) exceeding '
-                #         + f'{threshold_in_std:.2g} std found. ')
-                # if len(Jumps_indices) > 0:
-                # clear_lines()
-                # print(f'std values: ')
-                std_list = list(array[Jumps_indices] / std)
-                # print(array[Jumps_indices] / std)
-            return Jumps_indices, std_list
-
-        self.Jumps_X, self.Jumps_Y = [], []
-        std_X_list, std_Y_list = [], []
-        if checkX:
-            self.Jumps_X, std_X_list = checkJump(
-                self.dataX, self.dataXmean, self.dataXstd
-            )
-        if checkY:
-            self.Jumps_Y, std_Y_list = checkJump(
-                self.dataY, self.dataYmean, self.dataYstd
-            )
-
-        Jumps_indices = self.Jumps_X + self.Jumps_Y
-        if verbose:
-            clear_lines()
-            print(
-                f"{self.tsCheckJump.__name__}: "
-                + f"data {self.filelist} \n{len(Jumps_indices):d} jump(s) exceeding "
-                + f"{threshold_in_std:.2g} std found. "
-            )
-            if len(Jumps_indices) > 0:
-                clear_lines()
-                print(f"std values: ")
-                print([round(std_sigma, 3) for std_sigma in std_X_list + std_Y_list])
-        if makeplot:
-            self.displayTS(
-                showpulsedata=False,
-                showchanX=True,
-                showchanY=True,
-                plotrate=None,  # in [Hz]. Default to None
-                scatter_X=self.Jumps_X,
-                scatter_Y=self.Jumps_Y,
-                # maxlen=int(1e7),
-                verbose=False,
-            )
-
-        if checkX and checkY:
-            return [(len(self.Jumps_X) > 0), (len(self.Jumps_Y) > 0)]
-
-    def tsCheckNorm(
-        self,
-        checkX: bool = True,
-        checkY: bool = True,
-        alpha: float = 0.05,
-        makeplot: bool = False,
-        verbose: bool = False,
-    ):
-        """
-        Perform the Shapiro-Wilk test for normality.
-
-        The Shapiro-Wilk test tests the null hypothesis that the
-        data was drawn from a normal distribution.
-
-        return
-        ------
-        Null hypothesis H0: The time-series is normally distributed.
-        Alternative hypothesis H1: The time-series is not normally distributed.
-
-        return False if the null hypothesis is NOT rejected (ts is normally distributed).
-        return True if the null hypothesis is rejected (ts is NOT normally distributed).
-
-        False (negative) is favored, like in a COVID-19 PCR test report.
-
-        """
-        if checkX:
-            stat_X, p_X = shapiro(self.dataX)
-        if checkY:
-            stat_Y, p_Y = shapiro(self.dataY)
-        if makeplot:
-            # dataX_hist_ax, dataY_hist_ax, \
-            # FFTreal_hist_ax, FFTimag_hist_ax, \
-            # PSD_ax, PSD_hist_ax =
-            self.displayHist(
-                showchanXhist=True,
-                showchanYhist=True,
-                showFFTrealhist=False,
-                showFFTimghist=False,
-                showPSDhist=False,
-                freqRangeforHist=None,
-                scale="log",  # or 'log'
-                # normalizebysigma=True,
-                showplt=True,
-                verbose=False,
-            )
-        if checkX and checkY and verbose:
-            if p_X < alpha:
-                clear_lines()
-                print(
-                    f"[{self.tsCheckNorm.__name__}] Warning: dataX of {self.filelist} failed to pass normality check. "
-                    + f"stat_X={stat_X:.3f}, p_X={p_X:.3e}. "
-                )
-            if p_Y < alpha:
-                clear_lines()
-                print(
-                    f"[{self.tsCheckNorm.__name__}] Warning: dataY of {self.filelist} failed to pass normality check. "
-                    + f"stat_Y={stat_Y:.3f}, p_Y={p_Y:.3e}. "
-                )
-
-        if checkX and checkY:
-            return [(p_X < alpha), (p_Y < alpha)]
-
-    def tsCheckSanity(
-        self,
-        # checkXandYconsit:bool=True,
-        plotIfInsane: bool = False,
-        verbose=False,
-    ):
-        """
-        check drifts jumps, and normality in the time-series
-        """
-        func_list = [self.tsCheckDrift, self.tsCheckJump, self.tsCheckNorm]
-        report = {"drift": [], "jump": [], "normality": []}
-        # report['drift'] = [self.tsCheckDrift(makeplot=plotIfInsane, verbose=verbose)]
-        # report['jump'] = [self.tsCheckJump(threshold_in_std=5, makeplot=plotIfInsane, verbose=verbose)]
-        # report['normality'] = [self.tsCheckNorm(makeplot=False, verbose=verbose)]
-
-        for i, key in enumerate(report.keys()):
-            report[key] = func_list[i](makeplot=False, verbose=verbose)
-            if True in report[key]:
-                func_list[i](makeplot=plotIfInsane, verbose=verbose)
-        if verbose:
-            print("Sanity check report")
-            print("drift")
-            print(report["drift"])
-            print("jump")
-            print(report["jump"])
-            print("normality")
-            print(report["normality"])
-        return report
-
     # @record_runtime_YorN(RECORD_RUNTIME)
     def psdFindBaseline(
         self,
@@ -1495,20 +1019,20 @@ class LIASignal:
         find baseline in the power spectrum
         """
         self.psdBaselineRemoval_flag = False
-        if not hasattr(self, "avgPSD"):
+        if not hasattr(self, "PSD"):
             # clear_lines()
             print(
                 f"[{self.psdFindBaseline.__name__}] Warning: object "
-                "does not have the attribute avgPSD. "
+                "does not have the attribute PSD. "
                 "Now self.GetNoPulsePSD() is executed for generating a power spectrum "
                 "for the histogram. "
             )
             self.GetNoPulsePSD()
 
-        if len(self.avgPSD) < 100:
+        if len(self.PSD) < 100:
             # clear_lines()
             print(
-                f"[{self.psdFindBaseline.__name__}] len(self.avgPSD) < 100. "
+                f"[{self.psdFindBaseline.__name__}] len(self.PSD) < 100. "
                 "array may be too short for baseline diagnostics. "
             )
 
@@ -1521,19 +1045,19 @@ class LIASignal:
                     "No horizontal combination will be executed. "
                 )
                 freq = self.frequencies
-                PSD = self.avgPSD
+                PSD = self.PSD
             else:
-                num = len(self.avgPSD) // HorCombn_step
+                num = len(self.PSD) // HorCombn_step
                 HorLen = int(num * HorCombn_step)
                 freq = self.frequencies[
                     HorCombn_step // 2 : HorLen + HorCombn_step // 2 : HorCombn_step
                 ]
-                PSD = self.avgPSD[0:HorLen].reshape((num, HorCombn_step))
+                PSD = self.PSD[0:HorLen].reshape((num, HorCombn_step))
                 PSD = np.mean(PSD, axis=1)
                 assert freq.shape == PSD.shape
         else:
             freq = self.frequencies
-            PSD = self.avgPSD
+            PSD = self.PSD
 
         if len(PSD) > 1000000:
             # clear_lines()
@@ -1585,7 +1109,7 @@ class LIASignal:
 
         PSDlabel = "PSD"
 
-        normPSD = self.avgPSD / baseline - 1.0
+        normPSD = self.PSD / baseline - 1.0
         normPSDlabel = "normalized PSD (baseline removed)"
 
         if np.any(normPSD > 1e3):
@@ -1596,13 +1120,13 @@ class LIASignal:
         if showStats:
             if freqRangeForStats is None:
                 r0 = 0
-                r1 = len(self.avgPSD)
+                r1 = len(self.PSD)
             else:
                 r0 = np.argmin(abs(self.frequencies - freqRangeForStats[0]))
                 r1 = np.argmin(abs(self.frequencies - freqRangeForStats[1]))
 
-            PSDlabel += f"\nmean={np.mean(self.avgPSD[r0:r1]):.2g}"
-            PSDlabel += f"\nstd={np.std(self.avgPSD[r0:r1]):.2g}"
+            PSDlabel += f"\nmean={np.mean(self.PSD[r0:r1]):.2g}"
+            PSDlabel += f"\nstd={np.std(self.PSD[r0:r1]):.2g}"
             normPSDlabel += f"\nmean={np.mean(normPSD[r0:r1]):.2g}"
             normPSDlabel += f"\nstd={np.std(normPSD[r0:r1]):.2g}"
             print(f"[{self.psdFindBaseline.__name__}] stats:")
@@ -1622,14 +1146,14 @@ class LIASignal:
             if showStats:
                 ax00.fill_between(
                     self.frequencies[r0:r1],
-                    np.amax(self.avgPSD),
-                    np.amin(self.avgPSD),
+                    np.amax(self.PSD),
+                    np.amin(self.PSD),
                     color="r",
                     alpha=0.1,
                     zorder=6,
                     label="Stats Range",
                 )
-            ax00.plot(self.frequencies, self.avgPSD, label=PSDlabel)
+            ax00.plot(self.frequencies, self.PSD, label=PSDlabel)
             if HorCombn_opt:
                 ax00.plot(freq, PSD, label="PSD_HC", linestyle="-", c="g")
             ax00.plot(
@@ -1662,7 +1186,7 @@ class LIASignal:
                 print(
                     f"{self.psdFindBaseline.__name__} is removing the baseline in the PSD. "
                 )
-            self.avgPSD = normPSD
+            self.PSD = normPSD
             del output
             self.psdBaselineRemoval_flag = True
 
@@ -1920,290 +1444,6 @@ class LIASignal:
             check(self.acq_arr)
             print("\n")
         # return False
-
-    def FindSpinEcho_BACKUP_16_01_24(
-        self,
-        search_mod: str,
-        trigger_value,
-        pulseduration,
-        echonumber: int,
-        echotime: float,
-        verbose: bool,
-        plot: bool,
-        savepath: str,
-    ):
-        """
-        Find the start and end of excitation pulse in the Aux channel recording.
-
-
-                    90° pulse      180° pulse           180° pulse           180° pulse
-                                   ┌───────┐            ┌───────┐            ┌───────┐
-                                   |       |            |       |            |       |
-                    ┌───────┐      |       |            |       |            |       |
-                    |       |      |       |            |       |            |       |
-        ────────────┘       └──────┘       └────────────┘       └────────────┘       └───────────
-                    ↑       ↑      ↑       ↑            ↑       ↑            ↑       ↑
-                discard   discard start[0] end[1]      start[1] end[2]     start[2] discard
-
-
-        Parameters
-        ----------
-        self : (class) LIAsignal
-            Signal from lock-in amplifier and also the processed data
-        trigger_value : float
-            same as for FindPulse()
-        search_mod : str
-            same as for FindPulse()
-        pulseduration : float
-            Duration of a single pulse in
-        echonumber : float
-            Number of 180° pulses
-        echotime : float
-            Time between the starting points of 2 180° pulses
-
-        Returns
-        -------
-        Null
-
-        Examples
-        --------
-        >>>
-
-        Referrence
-        --------
-        Null
-        """
-        self.exptype = "CPMG"
-
-        # determine the trigger mode
-        assert search_mod is not None
-        if search_mod.upper() in AUTO_LIST:
-            trigger_value = np.amax(self.pulsedata) / 2.0
-        elif search_mod.upper() in MANUAL_LIST:
-            assert trigger_value is not None
-
-        if trigger_value == 0:
-            trigger_value = np.amax(self.pulsedata) / 2.0
-            if verbose:
-                check(trigger_value)
-
-        # determine the length of acquisition delay and acquisition time
-        assert self.acqDelay is not None
-        assert self.acqTime is not None
-        # acqdelaylen = int(self.acqDelay * self.samprate)
-        acqdelaylen = int(np.ceil(self.acqDelay * self.samprate))
-        acqtimelen = int(np.ceil(self.acqTime * self.samprate))
-        self.acqtimelen = acqtimelen
-        if acqdelaylen <= 3:
-            print(
-                f"!!WARNING!! acqDelay * samprate = {acqdelaylen}. This could be too short for PSD. "
-            )
-
-        if search_mod.upper() in AUTO_LIST:
-            # print("search mod auto")
-            startofpulse = np.flatnonzero(
-                (self.pulsedata[1:] > trigger_value)
-                & (self.pulsedata[:-1] < trigger_value)
-            )
-            endofpulse = np.flatnonzero(
-                (self.pulsedata[1:] < trigger_value)
-                & (self.pulsedata[:-1] > trigger_value)
-            )
-            # check('Auto mode')
-            # check(startofpulse)
-            # check(endofpulse)
-
-            if verbose:
-                print(
-                    "removing first entry (90° pulse) from pulse arrays for spin echo analysis"
-                )
-            startofpulse = startofpulse[1:]
-            endofpulse = endofpulse[1:]
-
-            if verbose:
-                print("startofpulse.shape before adjustment ", startofpulse.shape)
-                print("endofpulse.shape before adjustment ", endofpulse.shape)
-
-            if startofpulse[0] < endofpulse[0]:
-                startofpulse = startofpulse[1:]
-
-            if len(startofpulse) < 1 or len(endofpulse) < 1:
-                raise ValueError("len(startofpulse)<=1 or len(endofpulse)<=1")
-
-            if startofpulse[-1] < endofpulse[-1]:
-                endofpulse = endofpulse[0:-1]
-
-            if verbose:
-                print("startofpulse.shape after adjustment ", startofpulse.shape)
-                print("endofpulse.shape after adjustment ", endofpulse.shape)
-
-            #########################
-            # # check mismatch
-            # diff_default = startofpulse[0] - endofpulse[0]
-            # if verbose: check(diff_default)
-            # mismatches = np.ones(len(startofpulse))
-            # mismatches[0] = 0
-            # while 1 in mismatches:
-            #     for i in range(1, len(startofpulse)):
-            #         diff = startofpulse[i] - endofpulse[i]
-            #         if diff != diff_default:
-            #             endofpulse[i] += 1
-            #             mismatches[i] = 1
-            #             print("chunk mismatch ALERT")
-            #             check(diff)
-            #         else:
-            #             mismatches[i] = 0
-            # #check(mismatches)
-            #########################
-
-            self.startofpulse = startofpulse
-            self.endofpulse = endofpulse
-
-            startofacq = self.endofpulse + acqdelaylen
-            # endofacq = self.startofpulse - acqdelaylen
-
-            acqlength = self.startofpulse[0] - self.endofpulse[0] - acqdelaylen
-            endofacq = self.endofpulse + acqlength
-
-            self.acq_arr = np.array([startofacq, endofacq]).transpose()
-            # if verbose: check(self.acq_arr)
-            if len(self.acq_arr) <= 3:
-                print("WARNING! len(self.acq_arr) <= 3. Too less pulses?")
-            # self.acq_arr = self.acq_arr[1:]
-
-            del (
-                startofpulse,
-                endofpulse,
-                startofacq,
-                endofacq,
-                acqdelaylen,
-            )  # , mismatches
-
-        elif search_mod in ["manual", "Manual"]:
-            # print("search mod manual")
-
-            pulselen = int(np.ceil(pulseduration * self.samprate))
-            if verbose:
-                print("pulseduration ", pulseduration)
-                print("self.samprate ", self.samprate)
-                print("pulselen ", pulselen)
-            if pulseduration is None:
-                pulseduration = self.pulseduration
-            if pulseduration is None:
-                raise ValueError("pulseduration and self.pulseduration is None")
-
-            startofpulse = np.flatnonzero(
-                (self.pulsedata[1:] > trigger_value)
-                & (self.pulsedata[:-1] < trigger_value)
-            )
-            endofpulse = startofpulse + pulselen
-
-            if verbose:
-                print(
-                    "remove first entry (90° pulse) from pulse arrays for spin echo analysis"
-                )
-            startofpulse = startofpulse[1:]
-            endofpulse = endofpulse[1:]
-
-            if len(startofpulse) < 1 or len(endofpulse) < 1:
-                return True
-                # raise ValueError('number of pulses less than 1.')
-
-            if verbose:
-                print("startofpulse.shape before adjustment ", startofpulse.shape)
-                print("endofpulse.shape before adjustment ", endofpulse.shape)
-
-            if startofpulse[0] < endofpulse[0]:
-                print("fixing first pulse start")
-                startofpulse = startofpulse[1:]
-
-            if startofpulse[-1] < endofpulse[-1]:
-                # if IndexError: # unsafe edit just to get it working, we have to resolve it later
-                #    pass
-                print("fixing last pulse start")
-                endofpulse = endofpulse[0:-1]
-
-            if endofpulse[-1] > (len(self.pulsedata) - 1):
-                print("fixing last pulse end")
-                endofpulse = endofpulse[:-1]
-
-            if verbose:
-                print("startofpulse.shape after adjustment ", startofpulse.shape)
-                print("endofpulse.shape after adjustment ", endofpulse.shape)
-
-            if verbose:
-                check(startofpulse)
-                check(endofpulse)
-
-            self.startofpulse = startofpulse
-            self.endofpulse = endofpulse
-            del startofpulse, endofpulse
-
-            # acqdelaylen = int(self.acqDelay * self.samprate)
-            # if acqdelaylen <=3:
-            #     print(f'!!WARNING!! acqDelay * samprate = {acqdelaylen}. ')
-
-            echotimelen = int(echotime * self.samprate)
-            pulse_diff = np.amin(self.startofpulse - self.endofpulse)
-            if verbose:
-                check(echotimelen)
-                check(pulse_diff)
-            # these 2 above should be the same I guess? when testing: difference 10
-
-            pulse_interval = np.amax(self.endofpulse) - np.amin(self.endofpulse)
-            echotime_total = echotimelen * echonumber
-            if verbose:
-                check(pulse_interval)
-                check(echotime_total)
-            # same for these 2, difference 1595
-
-            if acqdelaylen > pulse_diff:
-                print("acqdelaylen ", acqdelaylen)
-                print("np.amin(self.startofpulse - self.endofpulse) ", pulse_diff)
-                raise ValueError("points of acqDelay > min(endofpulse-startofpulse)")
-
-            startofacq = self.endofpulse + acqdelaylen
-            endofacq = self.endofpulse + echotimelen - pulselen
-            self.acq_arr = np.array([startofacq, endofacq]).transpose()
-            if verbose:
-                check(self.acq_arr)
-            if len(self.acq_arr) <= 3:
-                print("WARNING! len(self.acq_arr) <= 3. Too less pulses?")
-
-            # del pulselen, acqdelaylen, echotimelen, pulse_diff, pulse_interval, echotime_total, startofacq, endofacq
-
-        else:
-            raise ValueError("search_mod not found")
-
-        if plot:
-            fig, ax1 = plt.subplots(figsize=(16, 9), dpi=100)
-            ax2 = ax1.twinx()
-            # ax1.plot(self.timestamp, self.pulsedata, color="g")
-            # ax2.plot(self.timestamp, (self.dataX), color="b")
-
-            FIDall = []
-            alltimes = []
-            for i in range(len(self.acq_arr)):
-
-                timedomain = self.timestamp[self.acq_arr[i, 0] : self.acq_arr[i, 1]]
-                alltimes.append(timedomain)
-
-                pulsedata = self.pulsedata[self.acq_arr[i, 0] : self.acq_arr[i, 1]]
-
-                FIDhere = (
-                    self.dataX[self.acq_arr[i, 0] : self.acq_arr[i, 1]]
-                    + 1j * self.dataY[self.acq_arr[i, 0] : self.acq_arr[i, 1]]
-                )
-                FIDall.append(FIDhere)
-
-                # ax1.plot(timedomain, pulsedata, color="g")
-                ax2.plot(timedomain, FIDhere, color="b")
-
-            plt.show()
-
-            # np.savetxt(savepath[:-4]+'_timeseries.txt', np.array(alltimes), delimiter=' ', newline='\n')
-            # np.savetxt(savepath[:-4]+'_FIDseries.txt', np.array(FIDall), delimiter=' ', newline='\n')
-            fig.savefig(savepath[:-4] + "_timeseries.png")
 
     def FindSpinEcho(
         self,
@@ -2653,7 +1893,7 @@ class LIASignal:
                 data_x=self.dataX[self.acq_arr[i, 0] : self.acq_arr[i, 1]],
                 data_y=self.dataY[self.acq_arr[i, 0] : self.acq_arr[i, 1]],
                 samprate=self.samprate,
-                demodfreq=self.dmodfreq,
+                demodfreq=self.demodfreq,
                 attenuation=self.attenuation,
                 windowfunction=windowfunction,
                 decayfactor=decayfactor,
@@ -2667,7 +1907,7 @@ class LIASignal:
             del singlePSD  # delete singlePSD before going to the next iteration
 
         self.frequencies = frequencies  # store frequency axis
-        self.avgPSD = PSD / len(selectPulse_list)  # store the average PSD
+        self.PSD = PSD / len(selectPulse_list)  # store the average PSD
         self.selectPulse_list = (
             selectPulse_list  # This is for plotting in self.GetSpectrum()
         )
@@ -2767,8 +2007,8 @@ class LIASignal:
             selectshots=selectshots,
             verbose=verbose,
         )
-        noisespectrum = self.avgPSD
-        del self.avgPSD
+        noisespectrum = self.PSD
+        del self.PSD
 
         # extract signal spectrum
         startofacq = self.endofpulse + self.acqdelaylen
@@ -2781,137 +2021,9 @@ class LIASignal:
         )
 
         # substract the nosie background from the signal spectrum
-        self.avgPSD -= noisespectrum
+        self.PSD -= noisespectrum
 
         del startofacq, noisespectrum  # delete useless variables
-
-    def Get2Domain_chanstd(
-        self,
-        windowfunction="rectangle",
-        decayfactor=-10,
-        selectshots=[],
-        plot_opt=False,
-        verbose=False,
-    ):
-        """
-        This function is designed for searching for the NMR signal in pulsed-NMR scheme.
-        The NMR signal decays after the excitation pulse. We should observe this dacay
-        not only in time-series, but also in the frequency channels of the Larmor
-        frequency if we generate multiple power spectra from slices of the time-series.
-        Such decay can be found by computing the standard deviation of the values in a
-        frequency bin of different power spectra.
-
-        Parameters:
-        --------------
-        windowfunction : str
-            optional Defaults to 'rectangle'.
-        decayfactor : int, optional
-            Defaults to -10.
-        selectshots : list, optional
-            Defaults to [].
-        verbose : bool, optional
-            Defaults to False.
-        """
-        self.chanstd_flag = False
-        if len(self.endofpulse) == 1:
-            return
-        if selectshots is None or len(selectshots) == 0:
-            selectshots = range(len(self.endofpulse))
-
-        # else:
-        #     selectPulse_list = selectshots
-        # numofselectshots = len(selectPulse_list)
-
-        # if self.startofpulse[0] < self.endofpulse[0]:
-        #     interval = self.startofpulse[1] - self.endofpulse[0]
-        # else:
-        #     interval = self.endofpulse[0] - self.startofpulse[0]
-
-        chanstd_list = []  # what is this?
-
-        # find the longest pulse interval
-        # pulseInterval_list = []
-        numofPSD_list = []
-        for i in selectshots:
-            # pulseInterval_list.append(interval)
-            interval = self.startofpulse[i] - self.endofpulse[i]
-            numofPSD = (interval - 2 * self.acqdelaylen) // self.acqtimelen
-            if numofPSD < 2:
-                print(
-                    f"selected shot: {i}. numofPSD < 2. Insufficient amount of power spectra for computing standard deviation. "
-                )
-                return
-            if numofPSD < 3:
-                print("Warning: numofPSD < 3. ")
-            numofPSD_list.append(numofPSD)
-        # check(np.amax(numofPSD_list))
-
-        for i in selectshots:
-            PSD2D_list = []
-            for j in range(numofPSD_list[i]):
-                frequencies, singlePSD = stdLIAPSD(
-                    data_x=self.dataX[
-                        self.acq_arr[i, 0]
-                        + j * self.acqtimelen : self.acq_arr[i, 1]
-                        + j * self.acqtimelen
-                    ],
-                    data_y=self.dataY[
-                        self.acq_arr[i, 0]
-                        + j * self.acqtimelen : self.acq_arr[i, 1]
-                        + j * self.acqtimelen
-                    ],
-                    samprate=self.samprate,  # in Hz
-                    demodfreq=self.dmodfreq,  # in Hz
-                    attenuation=self.attenuation,  # in dB. Power ratio (10^(attenuation/10))
-                    windowfunction=windowfunction,  # Hanning, Hamming, Blackman
-                    decayfactor=decayfactor,
-                    showwindow=False,
-                    DTRCfilter=self.filterstatus,
-                    DTRCfilter_TC=self.filter_TC,
-                    DTRCfilter_order=self.filter_order,
-                    verbose=verbose,
-                )
-                PSD2D_list.append(singlePSD)
-                del singlePSD
-            PSD2D_arr = np.array(PSD2D_list)
-            # PSD2D_chanmean = np.mean(PSD2D_arr,axis=0)
-            chanstd_list.append(np.std(PSD2D_arr, axis=0) / np.mean(PSD2D_arr, axis=0))
-            del PSD2D_list, PSD2D_arr
-        self.chanstd_arr = np.array(chanstd_list)
-        self.chanstd_avg = np.mean(self.chanstd_arr, axis=0)
-        # check(frequencies.shape)
-        # check(self.chanstd_arr.shape)
-        # check(self.chanstd_avg.shape)
-        self.chanstd_flag = True
-        if plot_opt is True:
-            print("This function is not ready yet. ")
-
-    def GetAvgFIDsq(self, verbose=False):
-        print(
-            "It is not recommended to use AvgFIDsq now, because the time-series is not necessarily FID. "
-            "Instead, it is recommended to use AvgTSsq"
-        )
-        sumofFID = 0.0
-        self.AvgFIDsq = 0.0
-        numofpulses = len(self.acq_arr[:, 0])
-        for i in range(numofpulses):
-            FIDHere = (
-                self.dataX[self.acq_arr[i, 0] : self.acq_arr[i, 1]]
-                + 1j * self.dataY[self.acq_arr[i, 0] : self.acq_arr[i, 1]]
-            )
-            sumofFID += np.sum(abs(FIDHere) ** 2)
-        if verbose:
-            plt.figure()
-            plt.plot(np.real(sumofFID) / numofpulses, label="np.real(sumofFID)")
-            plt.plot(np.imag(sumofFID) / numofpulses, label="np.imag(sumofFID)")
-            # plt.scatter(np.real(sumofFID))
-            # plt.scatter(np.imag(sumofFID))
-            plt.grid()
-            plt.title("Averaged FID")
-            plt.show()
-        self.AvgFIDsq = np.real_if_close(sumofFID) / numofpulses
-        self.AvgTSsq = self.AvgFIDsq
-        del sumofFID, numofpulses
 
     def GetAvgTSsq(self, verbose=False):
         """
@@ -3012,7 +2124,7 @@ class LIASignal:
         """
         assert hasattr(self, "avgFFT")
         assert hasattr(self, "freq_resol")
-        self.FFTpower = np.sum(np.abs(self.avgFFT) ** 2.0) * self.freq_resol
+        self.FFTpower = np.sum(np.abs(self.FFT) ** 2.0) * self.freq_resol
         return self.FFTpower
 
     def GetPSDpower(self, verbose: bool = False):
@@ -3029,9 +2141,9 @@ class LIASignal:
         self.FFTpower
 
         """
-        assert hasattr(self, "avgPSD")
+        assert hasattr(self, "PSD")
         assert hasattr(self, "freq_resol")
-        self.PSDpower = np.sum(self.avgPSD) * self.freq_resol
+        self.PSDpower = np.sum(self.PSD) * self.freq_resol
         self.PSDpower
 
     # dealing with CPMG measurements
@@ -3193,9 +2305,9 @@ class LIASignal:
 
             # frequency of oscillations of time domain signal = difference between larmor freq and demod freq
             # we obtain resonance freq from FitPSD() parameters
-            # check(self.dmodfreq)
+            # check(self.demodfreq)
             # check(self.popt[0])
-            tau = 1.0 / abs(self.popt[0] - self.dmodfreq)  # [s]
+            tau = 1.0 / abs(self.popt[0] - self.demodfreq)  # [s]
             if verbose:
                 check(tau)
             tau = int(tau * self.samprate)  # convert to bins
@@ -3348,7 +2460,7 @@ class LIASignal:
                 self.T2Uncertainty = np.sqrt(pcov[1, 1])
             elif fitmethod == "exp_osc":
                 x_data = measuretime
-                # freq = abs(self.popt[0] - self.dmodfreq)
+                # freq = abs(self.popt[0] - self.demodfreq)
                 fitfunc = exp_decay_osc
                 popt0, pcov0 = curve_fit(exp_decay, x_data, y_data)
                 fitparas = [popt0[0], popt0[1], popt0[2], 1e-4, 5.0, np.pi / 2]
@@ -3538,7 +2650,7 @@ class LIASignal:
         self.fitcurves = []
 
         # analysis range
-        ar = [0, len(self.avgPSD)]
+        ar = [0, len(self.PSD)]
         if fitrange is not None:
             for i, freqindex in enumerate(fitrange):
                 if type(freqindex) == int:
@@ -3554,7 +2666,7 @@ class LIASignal:
         # estimate fit parameters
         fitparas = Function_dict[fitfunction][2](
             datax=self.frequencies[ar[0] : ar[1]],
-            datay=self.avgPSD[ar[0] : ar[1]],
+            datay=self.PSD[ar[0] : ar[1]],
             smooth=smooth,
             smoothlevel=smoothlevel,
             verbose=verbose,
@@ -3573,7 +2685,7 @@ class LIASignal:
             self.popt, self.pcov = scipy.optimize.curve_fit(
                 curvefunction,
                 self.frequencies[ar[0] : ar[1]],
-                self.avgPSD[ar[0] : ar[1]],
+                self.PSD[ar[0] : ar[1]],
                 p0=fitparas,
                 absolute_sigma=False,
             )
@@ -3736,14 +2848,14 @@ class LIASignal:
 
         # Compute residual and residual value.
         if getresidual:
-            self.residual = self.avgPSD[ar[0] : ar[1]] - self.fitcurves[-1]
+            self.residual = self.PSD[ar[0] : ar[1]] - self.fitcurves[-1]
             self.residualval = np.sum(abs(self.residual))
 
         # Compute chi square
         # Not sure if this is the correct way to do so, but self.chisq is certainly helpful.
         if getchisq:
             self.chisq = np.sum(
-                (self.avgPSD[ar[0] : ar[1]] - self.fitcurves[-1]) ** 2
+                (self.PSD[ar[0] : ar[1]] - self.fitcurves[-1]) ** 2
                 / abs(self.fitcurves[-1])
             )
 
@@ -3859,7 +2971,7 @@ class LIASignal:
         self.residualval = None
         self.chisq = None
         self.fitcurves = []
-        ar = [0, len(self.avgPSD)]
+        ar = [0, len(self.PSD)]
         for i in range(len(fitrange)):
             if type(fitrange[i]) == int or type(fitrange[i]) == float:
                 ar[i] = fitrange[i]
@@ -3876,7 +2988,7 @@ class LIASignal:
             self.popt, self.pcov = scipy.optimize.curve_fit(
                 f=fitfunction,
                 xdata=self.frequencies[ar[0] : ar[1]],
-                ydata=self.avgPSD[ar[0] : ar[1]],
+                ydata=self.PSD[ar[0] : ar[1]],
                 p0=fitparas,
                 absolute_sigma=False,
             )
@@ -3901,11 +3013,11 @@ class LIASignal:
             )  # self.popt[1]
 
             if getresidual:
-                self.residual = self.avgPSD[ar[0] : ar[1]] - self.fitcurves[-1]
+                self.residual = self.PSD[ar[0] : ar[1]] - self.fitcurves[-1]
                 self.residualval = np.sum(abs(self.residual))
             if getchisq:
                 self.chisq = np.sum(
-                    (self.avgPSD[ar[0] : ar[1]] - self.fitcurves[-1]) ** 2
+                    (self.PSD[ar[0] : ar[1]] - self.fitcurves[-1]) ** 2
                     / abs(self.fitcurves[-1])
                 )
             self.fitreport = f" Fit ({(100 - 100 * alpha):.0f} % confidence level)\n"
@@ -3973,7 +3085,7 @@ class LIASignal:
         fitparas = Function_dict[functionname][2](
             s=self.dataX[ar[0] : ar[1]] + 1j * self.dataY[ar[0] : ar[1]],
             Lorpopt=self.popt,
-            dmodfreq=self.dmodfreq,
+            demodfreq=self.demodfreq,
         )
         for i, inputfitpara in enumerate(inputfitparas):
             if type(inputfitpara) == int or type(inputfitpara) == float:
@@ -4439,10 +3551,8 @@ class LIASignal:
         makeplot: bool = False,
         verbose: bool = False,
     ):
-        assert hasattr(self, "avgPSD")
-        sg = savgol_filter(
-            self.avgPSD, window_length=window_length, polyorder=polyorder
-        )
+        assert hasattr(self, "PSD")
+        sg = savgol_filter(self.PSD, window_length=window_length, polyorder=polyorder)
         if makeplot:
             fig = plt.figure(figsize=(10.0, 8.0), dpi=150)  # initialize a figure
             width_ratios = [1, 1]
@@ -4457,23 +3567,19 @@ class LIASignal:
             PSD_hist_ax = fig.add_subplot(gs[2, 0])
             PSDsubSG_hist_ax = fig.add_subplot(gs[2, 1])
 
-            PSD_ax.plot(self.frequencies, self.avgPSD, label="raw PSD")
+            PSD_ax.plot(self.frequencies, self.PSD, label="raw PSD")
             PSD_ax.plot(self.frequencies, sg, label="SG output")
             # SG_ax.plot(self.frequencies, sg, label='SG output')
             PSDsubSG_ax.plot(
-                self.frequencies, self.avgPSD - sg, c="g", label="raw PSD - SG output"
+                self.frequencies, self.PSD - sg, c="g", label="raw PSD - SG output"
             )
 
             for ax in [PSD_ax, PSDsubSG_ax]:  # SG_ax,
                 ax.legend()
                 ax.set_ylabel("PSD [$\mathrm{V}^2/\mathrm{Hz}$]")
 
-            allmin = np.amin(
-                [np.amin(self.avgPSD), np.amin(sg), np.amin(self.avgPSD - sg)]
-            )
-            allmax = np.amax(
-                [np.amax(self.avgPSD), np.amax(sg), np.amax(self.avgPSD - sg)]
-            )
+            allmin = np.amin([np.amin(self.PSD), np.amin(sg), np.amin(self.PSD - sg)])
+            allmax = np.amax([np.amax(self.PSD), np.amax(sg), np.amax(self.PSD - sg)])
 
             PSD_ax.set_ylim(min(-allmax * 0.1, allmin * 1.5), max(0, allmax * 1.5))
             PSDsubSG_ax.set_xlabel("Frequency [Hz]")
@@ -4546,10 +3652,10 @@ class LIASignal:
                     xstamp,
                 )
 
-            ChisqHistPlot(PSD_hist_ax, data=self.avgPSD, title="raw PSD histogram")
+            ChisqHistPlot(PSD_hist_ax, data=self.PSD, title="raw PSD histogram")
             ChisqHistPlot(
                 PSDsubSG_hist_ax,
-                data=self.avgPSD - sg,
+                data=self.PSD - sg,
                 title="(raw PSD - SG) histogram",
             )
 
@@ -4559,14 +3665,13 @@ class LIASignal:
         return sg
 
     def psdMovAvgByStep(self, weights=None, step_len: int = 1, verbose: bool = False):
-        self.frequencies, self.avgPSD = MovAvgByStep(
+        self.frequencies, self.PSD = MovAvgByStep(
             xstamp=self.frequencies,
-            rawsignal=self.avgPSD,
+            rawsignal=self.PSD,
             weights=weights,
             step_len=step_len,
             verbose=verbose,
         )
-        # self.avgPSD /= np.vdot(weights, weights)
         self.freq_resol = step_len * self.freq_resol
 
     def GetSpinNoisePSDsub(
@@ -4603,7 +3708,7 @@ class LIASignal:
             data_x=self.dataX[acq_arr[i, 0] : acq_arr[i, 1]],
             data_y=self.dataY[acq_arr[i, 0] : acq_arr[i, 1]],
             samprate=self.samprate,  # in Hz
-            demodfreq=self.dmodfreq,  # in Hz
+            demodfreq=self.demodfreq,  # in Hz
             attenuation=self.attenuation,  # in dB. Power ratio (10^(attenuation/10))
             windowfunction=windowfunction,  # Hanning, Hamming, Blackman
             DTRCfilter=self.filterstatus,
@@ -4621,7 +3726,7 @@ class LIASignal:
                 ploycorrparas[3],
                 ploycorrparas[4],
                 ploycorrparas[5],
-                self.dmodfreq,
+                self.demodfreq,
             )
             # print('np.average(correction) ', np.average(correction))
         self.interestingfreqvalue_list = []
@@ -4671,7 +3776,7 @@ class LIASignal:
                 data_x=self.dataX[acq_arr[i, 0] : acq_arr[i, 1]],
                 data_y=self.dataY[acq_arr[i, 0] : acq_arr[i, 1]],
                 samprate=self.samprate,  # in Hz
-                demodfreq=self.dmodfreq,  # in Hz
+                demodfreq=self.demodfreq,  # in Hz
                 attenuation=self.attenuation,  # in dB. Power ratio (10^(attenuation/10))
                 windowfunction=windowfunction,  # Hanning, Hamming, Blackman
                 DTRCfilter=self.filterstatus,
@@ -4692,7 +3797,7 @@ class LIASignal:
         del singlePSD
         self.exptype = "Spin Noise Measurement"
         self.frequencies = frequencies
-        self.avgPSD = PSD / numofchunk  # averaged PSD in V^2/Hz
+        self.PSD = PSD / numofchunk  # averaged PSD in V^2/Hz
         del acq_arr, frequencies, PSD
         self.interestingfreqindex_list = np.array(self.interestingfreqindex_list)
         self.interestingfreqvalue_list = np.array(self.interestingfreqvalue_list)
@@ -4815,7 +3920,7 @@ class LIASignal:
 
         # Generate the frequency axis of the power spectrum
         frequencies = np.sort(
-            np.fft.fftfreq(chunklen, d=1.0 / self.samprate) + self.dmodfreq
+            np.fft.fftfreq(chunklen, d=1.0 / self.samprate) + self.demodfreq
         )
 
         # determine the correction (substraction) for PSD
@@ -4829,7 +3934,7 @@ class LIASignal:
                 polycorrparas[3],
                 polycorrparas[4],
                 polycorrparas[5],
-                self.dmodfreq,
+                self.demodfreq,
             )
 
         # initialize lists of
@@ -4895,7 +4000,7 @@ class LIASignal:
                 data_x=self.dataX[acq_arr[i, 0] : acq_arr[i, 1]],
                 data_y=self.dataY[acq_arr[i, 0] : acq_arr[i, 1]],
                 samprate=self.samprate,
-                demodfreq=self.dmodfreq,
+                demodfreq=self.demodfreq,
                 attenuation=self.attenuation,
                 windowfunction=windowfunction,
                 decayfactor=decayfactor,
@@ -4919,7 +4024,7 @@ class LIASignal:
         # store information
         self.frequencies = frequencies
         self.freq_resol = abs(frequencies[0] - frequencies[1])  # frequency resolution
-        self.avgPSD = PSD / len(chunk_list)  # averaged PSD in V^2/Hz
+        self.PSD = PSD / len(chunk_list)  # averaged PSD in V^2/Hz
         self.acq_arr = acq_arr
         del acq_arr, frequencies, PSD
         self.correction = correction
@@ -5022,7 +4127,7 @@ class LIASignal:
                 selectshots=selectshots,
                 verbose=verbose,
             )
-        self.avgPSD = np.abs(self.avgFFT) ** 2.0
+        self.PSD = np.abs(self.FFT) ** 2.0
 
     @record_runtime_YorN(RECORD_RUNTIME)
     def GetNoPulseFFT(
@@ -5133,7 +4238,7 @@ class LIASignal:
 
         # Generate the frequency axis of the power spectrum
         frequencies = np.sort(
-            np.fft.fftfreq(chunklen, d=1.0 / self.samprate) + self.dmodfreq
+            np.fft.fftfreq(chunklen, d=1.0 / self.samprate) + self.demodfreq
         )
         self.freq_resol = abs(frequencies[0] - frequencies[1])  # frequency resolution
 
@@ -5148,7 +4253,7 @@ class LIASignal:
                 polycorrparas[3],
                 polycorrparas[4],
                 polycorrparas[5],
-                self.dmodfreq,
+                self.demodfreq,
             )
 
         # initialize lists of
@@ -5210,7 +4315,7 @@ class LIASignal:
                 data_x=self.dataX[acq_arr[i, 0] : acq_arr[i, 1]],
                 data_y=self.dataY[acq_arr[i, 0] : acq_arr[i, 1]],
                 samprate=self.samprate,
-                dfreq=self.dmodfreq,
+                demodfreq=self.demodfreq,
                 attenuation=self.attenuation,
                 windowfunction=windowfunction,
                 decayfactor=decayfactor,
@@ -5232,7 +4337,7 @@ class LIASignal:
 
         # store information
         self.frequencies = frequencies
-        self.avgFFT = FFT / len(chunk_list)  # averaged FFT in V/sqrt(Hz)
+        self.FFT = FFT / len(chunk_list)  # averaged FFT in V/sqrt(Hz)
         self.acq_arr = acq_arr
         del acq_arr, frequencies, FFT
         self.correction = correction
@@ -5332,7 +4437,7 @@ class LIASignal:
         phase_ax = fig.add_subplot(gs[1, 1], sharex=real_ax)
         real_ax.plot(
             self.frequencies,
-            self.avgFFT.real,
+            self.FFT.real,
             label="Real part of FFT",
             color="tab:blue",
         )
@@ -5345,7 +4450,7 @@ class LIASignal:
         # labelbottom, labeltop, labelleft, labelright : bool : Whether to draw the respective tick labels.
         imag_ax.plot(
             self.frequencies,
-            self.avgFFT.imag,
+            self.FFT.imag,
             label="Imaginary part of FFT",
             color="tab:orange",
         )
@@ -5356,7 +4461,7 @@ class LIASignal:
         imag_ax.legend(loc="upper right")
         amp_ax.plot(
             self.frequencies,
-            np.abs(self.avgFFT) ** 2,
+            np.abs(self.FFT) ** 2,
             label="Amplitude of FFT^2",
             color="tab:purple",
         )
@@ -5368,7 +4473,7 @@ class LIASignal:
 
         phase_ax.plot(
             self.frequencies,
-            np.angle(self.avgFFT, deg=True),
+            np.angle(self.FFT, deg=True),
             label="Phase of  FFT",
             color="tab:cyan",
         )
@@ -5598,7 +4703,7 @@ class LIASignal:
                 data_x=self.dataX[self.acq_arr[i, 0] : self.acq_arr[i, 1]],
                 data_y=self.dataY[self.acq_arr[i, 0] : self.acq_arr[i, 1]],
                 samprate=self.samprate,  # in Hz
-                dfreq=self.dmodfreq,  # in Hz
+                demodfreq=self.demodfreq,  # in Hz
                 attenuation=self.attenuation,  # in dB. Power ratio (10^(attenuation/10))
                 windowfunction=windowfunction,  # Hanning, Hamming, Blackman
                 DTRCfilter=self.filterstatus,
@@ -5611,8 +4716,8 @@ class LIASignal:
             del singleFFT
 
         self.frequencies = frequencies
-        self.avgFFT = FFT / len(self.endofpulse)
-        self.avgPSD = abs(self.avgFFT) ** 2
+        self.FFT = FFT / len(self.endofpulse)
+        self.PSD = abs(self.FFT) ** 2
         del frequencies, FFT
         if showplt:
             fig = plt.figure(figsize=(20, 8))  #
@@ -5626,7 +4731,7 @@ class LIASignal:
             phase_ax = fig.add_subplot(gs[1, 1], sharex=real_ax)
             real_ax.plot(
                 self.frequencies,
-                self.avgFFT.real,
+                self.FFT.real,
                 label="Real part of FFT",
                 color="tab:blue",
             )
@@ -5639,7 +4744,7 @@ class LIASignal:
             # labelbottom, labeltop, labelleft, labelright : bool : Whether to draw the respective tick labels.
             imag_ax.plot(
                 self.frequencies,
-                self.avgFFT.imag,
+                self.FFT.imag,
                 label="Imaginary part of FFT",
                 color="tab:orange",
             )
@@ -5650,7 +4755,7 @@ class LIASignal:
             imag_ax.legend(loc="upper right")
             amp_ax.plot(
                 self.frequencies,
-                np.abs(self.avgFFT) ** 2,
+                np.abs(self.FFT) ** 2,
                 label="Amplitude of FFT^2",
                 color="tab:purple",
             )
@@ -5662,7 +4767,7 @@ class LIASignal:
 
             phase_ax.plot(
                 self.frequencies,
-                np.angle(self.avgFFT, deg=True),
+                np.angle(self.FFT, deg=True),
                 label="Phase of  FFT",
                 color="tab:cyan",
             )
@@ -5785,7 +4890,7 @@ class LIASignal:
     def InsertSignalFFT(self, func, verbose: bool = False):
         if not hasattr(self, "avgFFT"):
             self.GetNoPulseFFT()
-        self.avgFFT += func(self.frequencies)
+        self.FFT += func(self.frequencies)
 
     def GetT1(
         self,
@@ -5820,7 +4925,7 @@ class LIASignal:
                 data_x=self.dataX[self.acq_arr[i, 0] : self.acq_arr[i, 1]],
                 data_y=self.dataY[self.acq_arr[i, 0] : self.acq_arr[i, 1]],
                 samprate=self.samprate,  # in Hz
-                demodfreq=self.dmodfreq,  # in Hz
+                demodfreq=self.demodfreq,  # in Hz
                 attenuation=self.attenuation,  # in dB. Power ratio (10^(attenuation/10))
                 windowfunction=windowfunction,  # Hanning, Hamming, Blackman
                 decayfactor=-10,
@@ -5837,7 +4942,7 @@ class LIASignal:
         # gc.collect()
 
         self.frequencies = frequencies
-        self.avgPSD = PSD / len(selectPSDindex)
+        self.PSD = PSD / len(selectPSDindex)
         del frequencies, PSD
         # gc.collect()
 
@@ -6041,7 +5146,7 @@ class LIASignal:
                 )
 
             # Compute the standard deviation
-            self.avgPSDstd = np.std(self.avgPSD[stdstart:stdend])
+            self.PSDstd = np.std(self.PSD[stdstart:stdend])
 
         # The ratios of the heights of subplots
         height_ratios = [1, 1, 1, 0, 1]
@@ -6054,7 +5159,7 @@ class LIASignal:
                 3
                 * 1.05
                 * (np.amax(self.residual) - np.amin(self.residual))
-                / (np.amax(self.avgPSD) - np.amin(self.avgPSD))
+                / (np.amax(self.PSD) - np.amin(self.PSD))
             )
 
         # decide the height of the chanstd plot
@@ -6230,7 +5335,7 @@ class LIASignal:
                     referfreq = self.popt[0]
                 # otherwise, choose the frequency of the data point with the maximum amplitude
                 else:
-                    referfreq = self.frequencies[np.argmax(self.avgPSD)]
+                    referfreq = self.frequencies[np.argmax(self.PSD)]
             specx_dict = {
                 "HZ": ["Hz", 1],
                 "KHZ": ["kHz", 1e-3],
@@ -6294,49 +5399,28 @@ class LIASignal:
             # if ampunit.upper() == 'V':
             #     ampfactor = 1.
             if spectype == "PSD".upper():
-                self.spectrum = self.avgPSD
+                self.spectrum = self.PSD
                 ampfactor = 1.0
                 specyunit = "$V^2/\\mathrm{Hz}$"
             elif spectype == "ASD".upper():
-                self.spectrum = np.sqrt(self.avgPSD)
+                self.spectrum = np.sqrt(self.PSD)
                 ampfactor = 1.0
                 specyunit = "$V/\sqrt{\\mathrm{Hz}}$"
             elif spectype == "FluxPSD".upper() and ampunit != "expPhi".upper():
                 ampfactor = (Mf / Rf) ** 2
-                self.spectrum = self.avgPSD * ampfactor
+                self.spectrum = self.PSD * ampfactor
                 specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
             elif spectype == "FluxASD".upper() and ampunit != "expPhi".upper():
                 ampfactor = Mf / Rf
-                self.spectrum = np.sqrt(self.avgPSD) * ampfactor
+                self.spectrum = np.sqrt(self.PSD) * ampfactor
                 specyunit = "$\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
-            # elif ampunit in ['muV'.upper(),'microV'.upper(),'uV'.upper(),'muv'.upper(),'microv'.upper(),'uv'.upper()]:
-            #     if spectype == 'PSD'.upper():e12
-            #         self.spectrum = self.avgPSD * ampfactor
-            #         specyunit = '$\mu V^2/\\mathrm{Hz}$'
-            #     elif spectype == 'ASD'.upper():
-            #         ampfactor = 1e6
-            #         self.spectrum = np.sqrt(self.avgPSD) * ampfactor
-            #         specyunit = '$\mu V/\sqrt{\\mathrm{Hz}}$'
-            #     else:
-            #         raise ValueError('spectype wrong 313')
-            # elif ampunit in ['muPhi'.upper(), 'microPhi'.upper(), 'uPhi'.upper(), 'muphi'.upper(), 'microphi'.upper(), 'uphi'.upper()]:
-            #     if spectype == 'FluxPSD'.upper():
-            #         ampfactor = (Mf / Rf * 1e6) ** 2
-            #         self.spectrum = self.avgPSD * ampfactor
-            #         specyunit = '$\mu \Phi_{0}^{2}/\\mathrm{Hz}$'
-            #     elif spectype == 'FluxASD'.upper():
-            #         ampfactor = Mf / Rf * 1e6
-            #         self.spectrum = np.sqrt(self.avgPSD) * ampfactor
-            #         specyunit = '$\mu \Phi_{0}/\sqrt{\\mathrm{Hz}}$'
-            #     else:
-            #         raise ValueError('spectype wrong 314')
-            # the values of y-axis is diplayed in scientific notation
+
             elif ampunit == "expPhi".upper():
                 ampfactor = (Mf / Rf) ** 2
                 if spectype == "FluxPSD".upper():
                     if amppow is None:
-                        amppow = int(np.log10(np.amax(self.avgPSD * ampfactor)) - 1)
-                    self.spectrum = 10 ** (-amppow) * ampfactor * self.avgPSD
+                        amppow = int(np.log10(np.amax(self.PSD * ampfactor)) - 1)
+                    self.spectrum = 10 ** (-amppow) * ampfactor * self.PSD
                     # determine the unit of the spectrum
                     if amppow == 0:
                         specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
@@ -6344,9 +5428,9 @@ class LIASignal:
                         specyunit = "$10^{%d}\ \\Phi_{0}^{2}/\\mathrm{Hz}$" % (amppow)
                 elif spectype == "FluxASD".upper():
                     if amppow is None:
-                        self.spectrum = np.sqrt(self.avgPSD * ampfactor)
+                        self.spectrum = np.sqrt(self.PSD * ampfactor)
                         amppow = int(np.log10(np.amax(self.spectrum)) - 1)
-                    self.spectrum = 10 ** (-amppow) * np.sqrt(self.avgPSD * ampfactor)
+                    self.spectrum = 10 ** (-amppow) * np.sqrt(self.PSD * ampfactor)
                     if amppow == 0:
                         specyunit = "$\\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
                     else:
@@ -6355,17 +5439,6 @@ class LIASignal:
                         )
                 else:
                     raise ValueError("spectype wrong 315")
-            # elif ampunit == '1':
-            #     if spectype == 'PSD'.upper():
-            #         ampfactor = 1
-            #         self.spectrum = self.avgPSD * ampfactor ** 2
-            #         specyunit = '$1/\\mathrm{Hz}$'
-            #     elif spectype == 'ASD'.upper():
-            #         ampfactor = 1
-            #         self.spectrum = np.sqrt(self.avgPSD) * ampfactor
-            #         specyunit = '$1/\sqrt{\\mathrm{Hz}}$'
-            #     else:
-            #         raise ValueError('spectype must be \'PSD\' or \'ASD\'. ')
             else:
                 raise ValueError("cannot find ampunit")
 
@@ -6390,7 +5463,7 @@ class LIASignal:
                 spec_ax.plot(
                     specxaxis[stdstart:stdend],
                     self.spectrum[stdstart:stdend],
-                    label=f"Standard deviation = {(ampfactor) * self.avgPSDstd:.3e} "
+                    label=f"Standard deviation = {(ampfactor) * self.PSDstd:.3e} "
                     + specyunit,
                     c="tab:green",
                 )
@@ -6631,7 +5704,7 @@ class LIASignal:
             if self.fitflag:
                 referfreq = self.popt[0]
             else:
-                referfreq = self.frequencies[np.argmax(self.avgPSD)]
+                referfreq = self.frequencies[np.argmax(self.PSD)]
         specx_dict = {
             "HZ": ["Hz", 1],
             "KHZ": ["kHz", 1e-3],
@@ -6673,26 +5746,26 @@ class LIASignal:
         if ampunit.upper() == "V":
             if spectype.upper() == "PSD".upper():
                 ampfactor = 1
-                self.spectrum = self.avgPSD * ampfactor**2
+                self.spectrum = self.PSD * ampfactor**2
                 specyunit = "$V^2/\\mathrm{Hz}$"
             elif spectype.upper() == "ASD".upper():
                 ampfactor = 1
-                self.spectrum = np.sqrt(self.avgPSD) * ampfactor
+                self.spectrum = np.sqrt(self.PSD) * ampfactor
                 specyunit = "$V/\sqrt{\\mathrm{Hz}}$"
             else:
                 raise ValueError("spectype wrong 315")
         elif ampunit.upper() == "Phi".upper():
             if spectype.upper() == "FluxPSD".upper():
                 ampfactor = (Mf / Rf) ** 2
-                self.spectrum = self.avgPSD * ampfactor
+                self.spectrum = self.PSD * ampfactor
                 specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
             elif spectype.upper() == "PSD".upper():
                 ampfactor = (Mf / Rf) ** 2
-                self.spectrum = self.avgPSD * ampfactor
+                self.spectrum = self.PSD * ampfactor
                 specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
             elif spectype.upper() == "FluxASD".upper():
                 ampfactor = Mf / Rf
-                self.spectrum = np.sqrt(self.avgPSD) * ampfactor
+                self.spectrum = np.sqrt(self.PSD) * ampfactor
                 specyunit = "$\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
             else:
                 raise ValueError("spectype wrong 316")
@@ -6706,11 +5779,11 @@ class LIASignal:
         ]:
             if spectype.upper() == "PSD".upper():
                 ampfactor = 1e12
-                self.spectrum = self.avgPSD * ampfactor
+                self.spectrum = self.PSD * ampfactor
                 specyunit = "$\mu V^2/\\mathrm{Hz}$"
             elif spectype.upper() == "ASD".upper():
                 ampfactor = 1e6
-                self.spectrum = np.sqrt(self.avgPSD) * ampfactor
+                self.spectrum = np.sqrt(self.PSD) * ampfactor
                 specyunit = "$\mu V/\sqrt{\\mathrm{Hz}}$"
             else:
                 raise ValueError("spectype wrong 313")
@@ -6724,11 +5797,11 @@ class LIASignal:
         ]:
             if spectype.upper() == "FluxPSD".upper():
                 ampfactor = (Mf / Rf * 1e6) ** 2
-                self.spectrum = self.avgPSD * ampfactor
+                self.spectrum = self.PSD * ampfactor
                 specyunit = "$\mu \Phi_{0}^{2}/\\mathrm{Hz}$"
             elif spectype.upper() == "FluxASD".upper():
                 ampfactor = Mf / Rf * 1e6
-                self.spectrum = np.sqrt(self.avgPSD) * ampfactor
+                self.spectrum = np.sqrt(self.PSD) * ampfactor
                 specyunit = "$\mu \Phi_{0}/\sqrt{\\mathrm{Hz}}$"
             else:
                 raise ValueError("spectype wrong 314")
@@ -6736,9 +5809,8 @@ class LIASignal:
             if spectype.upper() == "FluxPSD".upper():
                 ampfactor = (Mf / Rf) ** 2
                 if amppow is None:
-                    # self.spectrum = self.avgPSD * ampfactor
-                    amppow = int(np.log10(np.amax(self.avgPSD * ampfactor)) - 1)
-                self.spectrum = 10 ** (amppow) * ampfactor * self.avgPSD
+                    amppow = int(np.log10(np.amax(self.PSD * ampfactor)) - 1)
+                self.spectrum = 10 ** (amppow) * ampfactor * self.PSD
                 # produce the unit of spectrum
                 if amppow == 0:
                     specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
@@ -6747,9 +5819,8 @@ class LIASignal:
             elif spectype.upper() == "Power Spectral Density".upper():
                 ampfactor = (Mf / Rf) ** 2
                 if amppow is None:
-                    # self.spectrum = self.avgPSD * ampfactor
-                    amppow = int(np.log10(np.amax(self.avgPSD * ampfactor)) - 1)
-                self.spectrum = 10 ** (amppow) * ampfactor * self.avgPSD
+                    amppow = int(np.log10(np.amax(self.PSD * ampfactor)) - 1)
+                self.spectrum = 10 ** (amppow) * ampfactor * self.PSD
                 # produce the unit of spectrum
                 if amppow == 0:
                     specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
@@ -6758,10 +5829,10 @@ class LIASignal:
             elif spectype.upper() == "FluxASD".upper():
                 ampfactor = Mf / Rf
                 if amppow is None:
-                    self.spectrum = ampfactor * np.sqrt(self.avgPSD)
+                    self.spectrum = ampfactor * np.sqrt(self.PSD)
                     amppow = int(np.log10(np.amax(self.spectrum)) - 1)
 
-                self.spectrum = 10 ** (amppow) * ampfactor * np.sqrt(self.avgPSD)
+                self.spectrum = 10 ** (amppow) * ampfactor * np.sqrt(self.PSD)
                 if amppow == 0:
                     specyunit = "$\\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
                 else:
@@ -6801,17 +5872,17 @@ class LIASignal:
                 )
 
             # Compute the standard deviation
-            self.avgPSDstd = np.std(self.avgPSD[stdstart:stdend])
+            self.PSDstd = np.std(self.PSD[stdstart:stdend])
             spec_ax.plot(
                 specxaxis[stdstart:stdend],
                 self.spectrum[stdstart:stdend],
-                label=f"Standard deviation = {(ampfactor) * self.avgPSDstd:.3e} "
+                label=f"Standard deviation = {(ampfactor) * self.PSDstd:.3e} "
                 + "$\\Phi_{0}^{2}/\\mathrm{Hz}$",
                 c="tab:green",
             )
             print("self.fitreport ", self.fitreport)
             print(
-                f"Standard deviation = {(ampfactor) * self.avgPSDstd:.3e} "
+                f"Standard deviation = {(ampfactor) * self.PSDstd:.3e} "
                 + "$\\Phi_{0}^{2}/\\mathrm{Hz}$"
             )
 
@@ -6956,22 +6027,19 @@ class LIASignal:
             self.frequencies = np.loadtxt(
                 filename, dtype=float, skiprows=5
             ).transpose()[0]
-            self.avgPSD = np.loadtxt(filename, dtype=float, skiprows=5).transpose()[1]
+            self.PSD = np.loadtxt(filename, dtype=float, skiprows=5).transpose()[1]
         else:
             self.frequencies = np.loadtxt(filename, dtype=float, skiprows=5)[0]
-            self.avgPSD = np.loadtxt(filename, dtype=float, skiprows=5)[1]
-        # if verbose:
-        #     print('self.frequencies.shape ', self.frequencies.shape)
-        #     print('self.avgPSD.shape ', self.avgPSD.shape)
-        PolyEven_centered = partial(PolyEven, center=self.dmodfreq, verbose=False)
+            self.PSD = np.loadtxt(filename, dtype=float, skiprows=5)[1]
+        PolyEven_centered = partial(PolyEven, center=self.demodfreq, verbose=False)
         ar = [len(self.frequencies) // 8, -len(self.frequencies) // 8]
         if verbose:
             print("ar ", ar)
-        fitparas = [self.avgPSD[len(self.avgPSD) // 2], 0, 0, 0, 0, 0]
+        fitparas = [self.PSD[len(self.PSD) // 2], 0, 0, 0, 0, 0]
         self.popt, self.pcov = scipy.optimize.curve_fit(
             PolyEven_centered,
             self.frequencies[ar[0] : ar[1]],
-            self.avgPSD[ar[0] : ar[1]],
+            self.PSD[ar[0] : ar[1]],
             fitparas,
         )
         self.fitflag = True
@@ -6997,9 +6065,9 @@ class LIASignal:
             self.popt[4],
             self.popt[5],
         )
-        self.residual = np.sum(
-            abs(self.avgPSD[ar[0] : ar[1]] - self.fitcurves)
-        ) / np.sum(abs(self.avgPSD[ar[0] : ar[1]]))
+        self.residual = np.sum(abs(self.PSD[ar[0] : ar[1]] - self.fitcurves)) / np.sum(
+            abs(self.PSD[ar[0] : ar[1]])
+        )
         self.fitreport = "PolyEven_centered fit (95 % confidence level)\n"
         self.fitreport += "C0 = {:.6u}\n".format(self.fitresultlist[0])
         self.fitreport += "C2 = {:.6u}\n".format(self.fitresultlist[1])
@@ -7027,7 +6095,7 @@ class LIASignal:
         # fig.subplots_adjust(left=left_spc, top=top_spc, right=right_spc,
         #                     bottom=bottom_spc, wspace=xgrid_spc, hspace=ygrid_spc)
         spec_ax = fig.add_subplot(gs[0, 0])
-        spec_ax.scatter(self.frequencies, self.avgPSD)
+        spec_ax.scatter(self.frequencies, self.PSD)
         spec_ax.plot(
             self.frequencies[ar[0] : ar[1]],
             self.fitcurves,

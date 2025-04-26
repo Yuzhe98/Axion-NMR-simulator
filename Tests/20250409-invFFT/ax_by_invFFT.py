@@ -1,4 +1,3 @@
-from cProfile import label
 import os
 import sys
 
@@ -9,8 +8,8 @@ sys.path.insert(0, os.path.abspath(os.curdir))
 
 import numpy as np
 import time
-from SimuTools import Sample, MagField, Simulation, TTL
-from DataAnalysis import LIASignal
+from SimuTools import Sample, MagField, Simulation, gate
+from DataAnalysis import DualChanSig
 from functioncache import check
 
 # import os
@@ -32,7 +31,7 @@ ExampleSample10MHzT = Sample(
     * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
     numofnuclei=1,  #
     tempunit="K",  # temperature scale
-    T2=.1 / np.pi,  # [s]
+    T2=0.1 / np.pi,  # [s]
     T1=1e9,  # [s]
     pol=1,
     verbose=False,
@@ -66,7 +65,7 @@ simu.excField.setALP_Field(
     method="inverse-FFT",
     timeStamp=simu.timeStamp,
     Brms=1e-10,  # RMS amplitude of the pseudo-magnetic field in [T]
-    nu_a=(-.7),  # frequency in the rotating frame
+    nu_a=(-0.7),  # frequency in the rotating frame
     # direction: np.ndarray,  #  = np.array([1, 0, 0])
     use_stoch=False,
     demodfreq=simu.demodfreq,
@@ -96,4 +95,3 @@ check(1 / (np.pi * T2))
 check(1 / (np.pi * tau))
 check(1 / (tau))
 simu.compareBandSig()
-

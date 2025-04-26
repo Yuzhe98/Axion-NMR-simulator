@@ -1,5 +1,6 @@
 import os
 import sys
+
 print(os.path.abspath(os.curdir))
 # os.chdir("..")  # go to parent folder
 # os.chdir("..")  # go to parent folder
@@ -8,8 +9,8 @@ sys.path.insert(0, os.path.abspath(os.curdir))
 
 import numpy as np
 import time
-from SimuTools import Sample, MagField, Simulation, TTL
-from DataAnalysis import LIASignal
+from SimuTools import Sample, MagField, Simulation, gate
+from DataAnalysis import DualChanSig
 from functioncache import check
 
 ExampleSample10MHzT = Sample(
@@ -83,7 +84,7 @@ simu.VisualizeTrajectory3D(
 
 processdata = True
 if processdata:
-    liastream = LIASignal(
+    liastream = DualChanSig(
         name="Simulation data",
         device="Simulation",
         device_id="Simulation",
@@ -111,16 +112,16 @@ if processdata:
     # 	np.sin(2 * np.pi * simu.nu_rot * simu.timestamp[0:-1:saveintv])
 
     liastream.GetNoPulsePSD(
-        windowfunction='rectangle',
+        windowfunction="rectangle",
         # decayfactor=-10,
         chunksize=None,  # sec
-        analysisrange = [0,-1],
+        analysisrange=[0, -1],
         getstd=False,
         stddev_range=None,
         # polycorrparas=[],
         # interestingfreq_list=[],
         selectshots=[],
-        verbose=False
+        verbose=False,
     )
     liastream.FitPSD(
         fitfunction="Lorentzian",  # 'Lorentzian' 'dualLorentzian' 'tribLorentzian' 'Gaussian 'dualGaussian' 'auto' 'Polyeven'

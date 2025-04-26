@@ -1,22 +1,12 @@
-# from turtle import color
-# import warnings
-# from turtle import color
-from cycler import V
-from sympy import use
 from functioncache import *
 
 import numpy as np
 
-# from numpy.fft import fft, ifft, fftfreq
-
-# import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-# from matplotlib.collections import PolyCollection
 import matplotlib.ticker as mticker
-
-# from numpy.core.fromnumeric import shape, transpose
+from mpl_toolkits.mplot3d import Axes3D  # for type hinting
 
 import numba as nb
 from math import sin, cos, sqrt
@@ -24,10 +14,10 @@ from scipy.stats import maxwell, rayleigh, uniform, norm, chi2, gamma, expon
 
 import h5py
 
-from DataAnalysis import LIASignal
+from DataAnalysis import DualChanSig
 
 
-def TTL(x: float | np.ndarray, start: float, stop: float) -> float:
+def gate(x: float | np.ndarray, start: float, stop: float) -> float:
     """
     Returns 1 if start <= x <= stop, else returns 0.
 
@@ -39,16 +29,7 @@ def TTL(x: float | np.ndarray, start: float, stop: float) -> float:
     float or array-like
         1 if start <= x <= stop, else 0.
     """
-    # if (start <= x) & (x <= stop):
-    #     return 1.0
-    # else:
-    #     return 0
-    return np.where((start <= x) & (x <= stop), 1.0, 0.0)
-
-
-# def timeDerivative(
-#         DeltaT:float, arr:np.ndarray)->np.ndarray:
-#     arr
+    return np.where((start <= x) & (x < stop), 1.0, 0.0)
 
 
 class Sample:
@@ -185,12 +166,6 @@ class Sample:
         self.vol = vol
         self.mdm = mdm
 
-
-# dictofsamples = {'Methanol':[4, 0.792, 32.04, 3/4],
-# 'Ethanol':[6, 0.78945, 46.069, 1/2],
-# '129Xe':[.26401, 2.942, 131.2930, 1],
-# '131Xe':[.21232, 2.942, 131.2930, 1],
-# 'TMS':[12, 0.648, 88.225, 12/12]}
 
 liquid_Xe129 = Sample(
     name="Liquid Xe-129",  # name of the atom/molecule
@@ -329,26 +304,58 @@ class MagField:
         """
         generate a pulse in the rotating frame
         """
-        Bx_envelope = 1.0 / 2 * B1 * duty_func(timeStamp)
+        direction_norm = direction / np.dot(direction, direction)
+
+        # excitation along x-axis
+        Bx_envelope = (
+            1.0
+            / 2
+            * B1
+            * duty_func(timeStamp)
+            * np.dot(np.array([1, 0, 0]), direction_norm)
+        )
+        check(Bx_envelope[0:10])
         Bx_envelope = np.multiply(
             Bx_envelope, np.cos(2 * np.pi * nu_rot * timeStamp + init_phase)
         )
         Bx = np.outer(Bx_envelope, np.array([1, 0, 0]))
 
-        By_envelope = 1.0 / 2 * B1 * duty_func(timeStamp)
+        # excitation along y-axis
+        By_envelope = (
+            1.0
+            / 2
+            * B1
+            * duty_func(timeStamp)
+            * np.dot(np.array([0, 1, 0]), direction_norm)
+        )
+        check(By_envelope)
         By_envelope = np.multiply(
             By_envelope, np.sin(2 * np.pi * nu_rot * timeStamp + init_phase)
         )
         By = np.outer(By_envelope, np.array([0, 1, 0]))
 
-        dBxdt_envelope = 1.0 / 2 * B1 * duty_func(timeStamp)
+        # 1st order time-derivate of the excitation along x-axis
+        dBxdt_envelope = (
+            1.0
+            / 2
+            * B1
+            * duty_func(timeStamp)
+            * np.dot(np.array([1, 0, 0]), direction_norm)
+        )
         dBxdt_envelope = np.multiply(
             dBxdt_envelope,
             -2 * np.pi * nu_rot * np.sin(2 * np.pi * nu_rot * timeStamp + init_phase),
         )
         dBxdt = np.outer(dBxdt_envelope, np.array([1, 0, 0]))
 
-        dBydt_envelope = 1.0 / 2 * B1 * duty_func(timeStamp)
+        # 1st order time-derivate of the excitation along y-axis
+        dBydt_envelope = (
+            1.0
+            / 2
+            * B1
+            * duty_func(timeStamp)
+            * np.dot(np.array([0, 1, 0]), direction_norm)
+        )
         dBydt_envelope = np.multiply(
             dBydt_envelope,
             2 * np.pi * nu_rot * np.cos(2 * np.pi * nu_rot * timeStamp + init_phase),
@@ -357,6 +364,7 @@ class MagField:
 
         self.B_vec = Bx + By
         self.dBdt_vec = dBxdt + dBydt
+
         # self.dBdt_vec = np.outer(dBxdt + dBydt, direction)
         # self.nu = nu_rot
         # def envelope(timeStamp):
@@ -373,7 +381,7 @@ class MagField:
         samprate=,
         showplt_opt=True
         """
-        stream = LIASignal(
+        stream = DualChanSig(
             name="ALP field gradient",
             device="Simulation",
             device_id="Simulation",
@@ -384,7 +392,7 @@ class MagField:
         stream.filterstatus = "off"
         stream.filter_TC = 0.0
         stream.filter_order = 0
-        stream.dmodfreq = demodfreq
+        stream.demodfreq = demodfreq
         stream.samprate = samprate
 
         stream.dataX = dataX
@@ -567,7 +575,7 @@ class MagField:
             self.dBdt_vec = dBxdt + dBydt
 
             if makeplot:
-                self.B_Stream = LIASignal(
+                self.B_Stream = DualChanSig(
                     name="ALP field gradient",
                     device="Simulation",
                     device_id="Simulation",
@@ -578,7 +586,7 @@ class MagField:
                 self.B_Stream.filterstatus = "off"
                 self.B_Stream.filter_TC = 0.0
                 self.B_Stream.filter_order = 0
-                self.B_Stream.dmodfreq = demodfreq
+                self.B_Stream.demodfreq = demodfreq
                 saveintv = 1
                 self.B_Stream.samprate = 1.0 / timeStep / saveintv
 
@@ -695,7 +703,7 @@ class MagField:
             self.dBdt_vec = dBxdt + dBydt
 
             if makeplot:
-                self.B_Stream = LIASignal(
+                self.B_Stream = DualChanSig(
                     name="ALP field gradient",
                     device="Simulation",
                     device_id="Simulation",
@@ -706,7 +714,7 @@ class MagField:
                 self.B_Stream.filterstatus = "off"
                 self.B_Stream.filter_TC = 0.0
                 self.B_Stream.filter_order = 0
-                self.B_Stream.dmodfreq = demodfreq
+                self.B_Stream.demodfreq = demodfreq
                 saveintv = 1
                 self.B_Stream.samprate = 1.0 / timeStep / saveintv
 
@@ -1653,7 +1661,7 @@ class Simulation:
     ):
         self.excType = "pulse"
         B1 = 2 * tipAngle / (self.sample.gyroratio * pulseDur)
-        duty_func = partial(TTL, start=0, stop=pulseDur)
+        duty_func = partial(gate, start=0, stop=pulseDur)
 
         self.excField.setPulse(
             timeStamp=self.timeStamp,
@@ -1697,14 +1705,7 @@ class Simulation:
             [Bx, By, Bz] = Bexc[
                 0:3
             ]  # *np.cos(2*np.pi * nu_rot * (i) * timestep + BALP[-1])
-            [dBxdt, dBydt, dBzdt] = dBdt[i][
-                0:3
-            ]  # (-1.0)*BALP[0:3] * 2*np.pi * nu_rot * np.sin(2*np.pi * nu_rot * (i) * timestep + BALP[-1])
-            # if i == 0 :
-            #     check(BALP)
-            #     check(BALP[0:3])
-            #     check([Bx, By, Bz])
-            #     check(self.nu_rot)
+            [dBxdt, dBydt, dBzdt] = dBdt[i][0:3]  #
             dMxdt = gyroratio * (My * Bz - Mz * By) - Mx / T2
             dMydt = gyroratio * (Mz * Bx - Mx * Bz) - My / T2
             dMzdt = gyroratio * (Mx * By - My * Bx) - (Mz - M0inf) / T1
@@ -1750,9 +1751,9 @@ class Simulation:
         )
         vecM0 = np.array([Mx, My, Mz])
         M0inf = np.vdot(vecM0, vecM0) ** 0.5
-        # check(M0inf)
+        #
         self.trjry[0] = vecM0
-        # check(self.gyroratio*self.B0z/(2*np.pi) - self.ALPwind.nu)
+        #
         timeStep = self.timeStep
         gyroratio = self.sample.gyroratio
         B0z_rot_amp = self.B0z - self.demodfreq / (self.sample.gyroratio / (2 * np.pi))
@@ -1807,11 +1808,6 @@ class Simulation:
                     * self.nu_rot
                     * np.sin(2 * np.pi * self.nu_rot * (i) * timeStep + BALP[-1])
                 )
-                # if i == 0 :
-                #     check(BALP)
-                #     check(BALP[0:3])
-                #     check([Bx, By, Bz])
-                #     check(self.nu_rot)
                 dMxdt = gyroratio * (My * Bz - Mz * By) - Mx / self.T2
                 dMydt = gyroratio * (Mz * Bx - Mx * Bz) - My / self.T2
                 dMzdt = gyroratio * (Mx * By - My * Bx) - (Mz - M0inf) / self.T1
@@ -1855,10 +1851,12 @@ class Simulation:
 
     def MonitorTrajectory(
         self,
-        plotrate=10**3,  # per simulation period
-        # rotframe=True,
-        verbose=False,
+        plotrate: float,  #
+        verbose: bool = False,
     ):
+        if plotrate is None:
+            plotrate = self.simuRate
+
         if plotrate > self.simuRate:
             print(
                 "WARNING: samprate > self.simurate. samprate will be decreased to simurate"
@@ -1867,6 +1865,7 @@ class Simulation:
             plotintv = 1
         else:
             plotintv = int(1.0 * self.simuRate / plotrate)
+
         self.trjry_visual = self.trjry.copy()
 
         BALP_array_step = np.concatenate(
@@ -1879,11 +1878,18 @@ class Simulation:
             ),
             axis=0,
         )
-        fig = plt.figure(figsize=(16, 8), dpi=150)  #
+        fig = plt.figure(figsize=(15*0.8, 7*0.8), dpi=150)  #
         gs = gridspec.GridSpec(nrows=2, ncols=4)  #
-        fig.subplots_adjust(  # left=left_spc, top=top_spc, right=right_spc,bottom=bottom_spc,
-            wspace=0.1, hspace=0.01
-        )
+        # fix the margins
+        left=0.056
+        bottom=0.1
+        right=0.985
+        top=0.924
+        wspace=0.313
+        hspace=0.127
+        fig.subplots_adjust(left=left, top=top, right=right,
+                            bottom=bottom, wspace=wspace, hspace=hspace)
+        
         BALPamp_ax = fig.add_subplot(gs[0, 0])
         Mxy_ax = fig.add_subplot(gs[0, 1], sharex=BALPamp_ax)
         Mz_ax = fig.add_subplot(gs[1, 1], sharex=BALPamp_ax)
@@ -1948,13 +1954,9 @@ class Simulation:
             alpha=0.7,
             linestyle="--",
         )
-        # Mxy_ax.plot(timestamp_step[0:-1:plotintv], 1, \
-        #     label='prediction for |Mt|', color='tab:green', alpha=0.7)
-        # np.savetxt(f'\\\\desktop-3ge6tor/d/Yu0702/casper-gradient-code/Supplementary/20220430 Scan Strategy/timestamp_step_T2s_{self.T2}.txt', timestamp_step[0:lastnum:plotintv])
-        # np.savetxt(f'\\\\desktop-3ge6tor/d/Yu0702/casper-gradient-code/Supplementary/20220430 Scan Strategy/Mtabs_T2s_{self.T2}.txt', Mtabs)
 
         Mxy_ax.legend(loc="upper right")
-        Mxy_ax.set_xlabel("time [s]")
+        # Mxy_ax.set_xlabel("time [s]")
         Mxy_ax.set_ylabel("")
         Mxy_ax.grid()
 
@@ -1966,21 +1968,21 @@ class Simulation:
         )
         Mz_ax.legend(loc="upper right")
         Mz_ax.grid()
-        # Mz_ax.set_xlabel('time [s]')
+        Mz_ax.set_xlabel('time [s]')
         Mz_ax.set_ylabel("")
         Mz_ax.set_ylim(0, 1.1)
 
         dMxydt_ax.plot(
             self.timeStamp[0:-1:plotintv],
             self.dMdt[0 : -1 : int(plotintv), 0],
-            label="$d M_x / d_t$",
+            label="$d M_x / dt$",
             color="tab:gray",
             alpha=0.7,
         )
         dMxydt_ax.plot(
             self.timeStamp[0:-1:plotintv],
             self.dMdt[0 : -1 : int(plotintv), 1],
-            label="$d M_y / d_t$",
+            label="$d M_y / dt$",
             color="tab:olive",
             alpha=0.7,
         )
@@ -1992,7 +1994,7 @@ class Simulation:
         dMzdt_ax.plot(
             self.timeStamp[0:-1:plotintv],
             self.dMdt[0 : -1 : int(plotintv), 2],
-            label="$d M_z / d_t$",
+            label="$d M_z / dt$",
             color="tab:cyan",
             alpha=1,
         )
@@ -2000,20 +2002,6 @@ class Simulation:
         dMzdt_ax.grid()
         dMzdt_ax.set_xlabel("time [s]")
         dMzdt_ax.set_ylabel("")
-
-        # McrossBxy_ax = fig.add_subplot(gs[0,3])
-        # McrossBxy_ax.plot(timestamp_step[0:-1:plotintv], self.McrossB[0:-1:int(plotintv),0], label='McrossBx', color='tab:blue',alpha=0.7)
-        # McrossBxy_ax.plot(timestamp_step[0:-1:plotintv], self.McrossB[0:-1:int(plotintv),1], label='McrossBy', color='tab:cyan',alpha=0.7)
-        # McrossBxy_ax.legend(loc='upper right')
-        # McrossBxy_ax.grid()
-        # # McrossBxy_ax.set_xlabel('time [s]')
-        # McrossBxy_ax.set_ylabel('')
-        # McrossBz_ax = fig.add_subplot(gs[1,3])
-        # McrossBz_ax.plot(timestamp_step[0:-1:plotintv], self.McrossB[0:-1:int(plotintv),2], label='McrossBz', color='tab:purple',alpha=1)
-        # McrossBz_ax.legend(loc='upper right')
-        # McrossBz_ax.grid()
-        # McrossBz_ax.set_xlabel('time [s]')
-        # McrossBz_ax.set_ylabel('')
 
         d2Mxydt_ax.plot(
             self.timeStamp[0:-1:plotintv],
@@ -2049,15 +2037,18 @@ class Simulation:
         fig.suptitle(f"T2={self.T2:.1g}s T1={self.T1:.1e}s")
         # gaNN={self.excField.gaNN:.0e} axion_nu={self.excField.nu:.1e}\nXe
         # print(f'TrajectoryMonitoring_gaNN={self.ALPwind.gaNN:.0e}_axion_nu={self.ALPwind.nu:.1e}_Xe_T2={self.T2:.1g}s_T1={self.T1:.1e}s')
-        plt.tight_layout()
+        # plt.tight_layout()
         plt.show()
 
     def VisualizeTrajectory3D(
         self,
-        plotrate=10**3,  # [Hz]
+        plotrate: float,  # [Hz]
         # rotframe=True,
         verbose=False,
     ):
+        if plotrate is None:
+            plotrate = self.simuRate
+
         if plotrate > self.simuRate:
             print(
                 "WARNING: plotrate > self.simurate. plotrate will be decreased to simurate"
@@ -2073,7 +2064,9 @@ class Simulation:
         gs = gridspec.GridSpec(nrows=1, ncols=1)
         # fig.subplots_adjust(left=left, top=top, right=right,
         #                             bottom=bottom, wspace=wspace, hspace=hspace)
-        threeD_ax = fig.add_subplot(gs[0, 0], projection="3d")
+        # threeD_ax:plt.Axes = fig.add_subplot(gs[0, 0], projection="3d")
+        threeD_ax: Axes3D = fig.add_subplot(gs[0, 0], projection="3d")
+
         # verts = []
         # verts.append(list(zip(frequencies, spectrum_arr[i])))
         # print('verts.shape ', len(verts), len(verts[0]))
@@ -2118,6 +2111,11 @@ class Simulation:
         except NotImplementedError:
             pass
         threeD_ax.set_box_aspect((1, 1, 1))
+
+        threeD_ax.xaxis.set_label_text("x")  #
+        threeD_ax.yaxis.set_label_text("y")  #
+        threeD_ax.zaxis.set_label_text("z")  #
+
         fig.suptitle(f"T2={self.T2:.1g}s T1={self.T1:.1e}s")
         # gaNN={self.excField.gaNN:.0e} axion_nu={self.excField.nu:.1e}\nXe
         # print(
@@ -2162,7 +2160,7 @@ class Simulation:
         h5f = h5py.File(h5fpathandname + suffix, "w")
         h5demod0 = h5f.create_group(f"NMRKineticSimu/demods/0")
         h5demod0.create_dataset(
-            "dmodfreq",
+            "demodfreq",
             data=np.array([abs(self.sample.gyroratio * self.B0z / (2 * np.pi))]),
         )
         h5demod0.create_dataset(
@@ -2206,23 +2204,19 @@ class Simulation:
     def analyzeTrajectory(
         self,
     ):
-        self.trjryStream = LIASignal(
+        self.trjryStream = DualChanSig(
             name="Simulation data",
-            device="Simulation",
-            device_id="Simulation",
             filelist=[],
             verbose=True,
         )
-        self.trjryStream.attenuation = 0
-        self.trjryStream.filterstatus = "off"
-        self.trjryStream.filter_TC = 0.0
-        self.trjryStream.filter_order = 0
-        self.trjryStream.dmodfreq = self.demodfreq
+        # self.trjryStream.attenuation = 0
+        # self.trjryStream.filterstatus = "off"
+        # self.trjryStream.filter_TC = 0.0
+        # self.trjryStream.filter_order = 0
+        self.trjryStream.demodfreq = self.demodfreq
         saveintv = 1
         self.trjryStream.samprate = self.simuRate / saveintv
         self.trjryStream.exptype = "Simulation"
-        # check(self.timestamp.shape)
-        # check(self.trjry[0:-1:saveintv, 0].shape)
 
         self.trjryStream.dataX = (
             1 * self.trjry[int(0 * self.simuRate) : -1 : saveintv, 0]
@@ -2265,7 +2259,7 @@ class Simulation:
     def analyzeB1(
         self,
     ):
-        self.B1Stream = LIASignal(
+        self.B1Stream = DualChanSig(
             name="Simulation data",
             device="Simulation",
             device_id="Simulation",
@@ -2276,7 +2270,7 @@ class Simulation:
         self.B1Stream.filterstatus = "off"
         self.B1Stream.filter_TC = 0.0
         self.B1Stream.filter_order = 0
-        self.B1Stream.dmodfreq = self.demodfreq
+        self.B1Stream.demodfreq = self.demodfreq
         saveintv = 1
         self.B1Stream.samprate = self.simuRate / saveintv
         # check(self.timestamp.shape)
@@ -2352,7 +2346,7 @@ class Simulation:
             BALP_spec / np.amax(BALP_spec),
             label="BALP_spec",
             linestyle="-",
-            zorder=1
+            zorder=1,
         )
         ax00.plot(
             specxaxis,

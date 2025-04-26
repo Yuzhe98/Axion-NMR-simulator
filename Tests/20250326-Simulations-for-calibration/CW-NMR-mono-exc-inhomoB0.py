@@ -9,8 +9,8 @@ sys.path.insert(0, os.path.abspath(os.curdir))
 
 import numpy as np
 import time
-from SimuTools import Sample, MagField, Simulation, TTL
-from DataAnalysis import LIASignal
+from SimuTools import Sample, MagField, Simulation, gate
+from DataAnalysis import DualChanSig
 from functioncache import check
 
 import matplotlib.pyplot as plt
@@ -34,7 +34,7 @@ ExampleSample10MHzT = Sample(
 excField = MagField(name="excitation field")  # excitation field in the rotating frame
 excField.nu = 1e6 + 0  # [Hz]
 
-Larmor_freqs = (1e6 - np.arange(-10, 2, 2))
+Larmor_freqs = 1e6 - np.arange(-10, 2, 2)
 B0z_list = Larmor_freqs / (ExampleSample10MHzT.gyroratio / (2 * np.pi))
 specy_list = []
 for B0z in B0z_list:
@@ -145,7 +145,12 @@ ax10 = fig.add_subplot(gs[1, 0], sharex=ax00)  #
 ax00.plot(specxaxis, B1spectrum, label="excitation field")
 
 for i, spectrum in enumerate(specy_list):
-    ax10.plot(specxaxis, specy_list[len(specy_list)-1-i], label=f"1 MHz + ({Larmor_freqs[len(specy_list)-1-i]-1e6:1.0f} Hz)", alpha=0.5)
+    ax10.plot(
+        specxaxis,
+        specy_list[len(specy_list) - 1 - i],
+        label=f"1 MHz + ({Larmor_freqs[len(specy_list)-1-i]-1e6:1.0f} Hz)",
+        alpha=0.5,
+    )
 
 
 # put figure index
@@ -159,9 +164,9 @@ ax00.legend()
 ax10.legend()
 
 # ax00.set_xscale('log')
-ax00.set_yscale('log')
+ax00.set_yscale("log")
 # ax10.set_xscale('log')
-ax10.set_yscale('log')
+ax10.set_yscale("log")
 
 ax00.set_ylabel("PSD")
 ax10.set_xlabel("Frequency [Hz]")

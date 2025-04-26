@@ -24,7 +24,7 @@ from scipy.signal import find_peaks
 from scipy.io import loadmat, savemat
 from sympy import true
 
-from DataAnalysis import SQUID, LIASignal
+from DataAnalysis import SQUID, DualChanSig
 from functioncache import (
     Lorentzian,
     MovAvgByStep,
@@ -126,7 +126,7 @@ class dmScanStep:
 
         """
         self.info = []
-        self.nps = LIASignal(
+        self.nps = DualChanSig(
             name="No-Pulse Stream",
             device="LIA",
             device_id=device_id,
@@ -135,7 +135,7 @@ class dmScanStep:
         )
         self.nps.SortFiles(verbose=False)
 
-        self.pNMRs = LIASignal(
+        self.pNMRs = DualChanSig(
             name="Pulsed-NMR Stream",
             device="LIA",
             device_id=device_id,
@@ -144,7 +144,7 @@ class dmScanStep:
         )
         self.pNMRs.SortFiles(verbose=False)
 
-        self.CPMGs = LIASignal(
+        self.CPMGs = DualChanSig(
             name="Pulsed-NMR Stream",
             device="LIA",
             device_id=device_id,
@@ -153,7 +153,7 @@ class dmScanStep:
         )
         self.CPMGs.SortFiles(verbose=False)
 
-        def LoadStreamInfo(Stream: LIASignal, file_list: list):
+        def LoadStreamInfo(Stream: DualChanSig, file_list: list):
             if file_list is None:
                 file_list = []
             for singlefile in file_list:
@@ -315,7 +315,7 @@ class dmScanStep:
         freq = self.nps.frequencies[f0:f1]
         # check(freq.shape)
         # check((self.nps.avgFFT[f0:f1]).shape)
-        self.nps.avgFFT[f0:f1] += g_a * self.axion.GetFFTsignal(
+        self.nps.FFT[f0:f1] += g_a * self.axion.GetFFTsignal(
             freq=freq, rand_amp=rand_amp, rand_phase=rand_phase, verbose=verbose
         )
         return
@@ -377,7 +377,7 @@ class dmScanStep:
             + np.arange(0.0, 10 * self.axion.lw_Hz, step=self.nps.freq_resol)
         )
         self.nps.psdMovAvgByStep(weights=weights, step_len=step_len, verbose=False)
-        self.nps.avgPSD *= np.sum(weights) / np.sum(weights**2)
+        self.nps.PSD *= np.sum(weights) / np.sum(weights**2)
 
         self.axion.lw_p = int(np.ceil(self.axion.lw_Hz / self.nps.freq_resol))
         assert self.axion.lw_p >= 1
@@ -476,7 +476,7 @@ class dmScanStep:
         # Keadevice = Kea(name='blank')
         # SQDsensor = SQUID(name='blank')
         if not hasattr(self, "nps"):
-            self.nps = LIASignal(
+            self.nps = DualChanSig(
                 name="LIA data",
                 device="LIA",
                 device_id="dev4434",
@@ -491,7 +491,7 @@ class dmScanStep:
         self.nps.GetNoPulseFFT(chunksize=None, getstd=False, verbose=False)
 
         self.freq_resol = np.abs(self.nps.frequencies[1] - self.nps.frequencies[0])
-        self.nps.avgPSD = np.abs(self.nps.avgFFT) ** 2.0
+        self.nps.PSD = np.abs(self.nps.FFT) ** 2.0
         # del self.nps.frequencies
 
         return 0
@@ -558,10 +558,10 @@ class dmScanStep:
             rand_phase=ifstochastic,
             # verbose=True
         )
-        step.nps.avgPSD = np.abs(step.nps.avgFFT) ** 2.0
+        step.nps.PSD = np.abs(step.nps.FFT) ** 2.0
         # step.nps.GetSpectrum(showtimedomain=False, showfreqdomain=True, spectype='PSD')
         if use_sg:
-            step.nps.avgPSD = step.nps.sgFilterPSD(
+            step.nps.PSD = step.nps.sgFilterPSD(
                 window_length=step.axion.lw_p // sg_axlw_frac,
                 polyorder=sg_order,
                 makeplot=False,
@@ -571,18 +571,18 @@ class dmScanStep:
         # step.nps.GetSpectrum(showtimedomain=False, showfreqdomain=True, spectype='PSD')
         r1 = step.nps.Hz2Index(step.axion.nu_a - 5.0 * step.axion.lw_Hz)
         # check(r1)
-        noisePSDmean = np.mean(step.nps.avgPSD[0:r1])
-        noisePSDstd = np.std(step.nps.avgPSD[0:r1])
+        noisePSDmean = np.mean(step.nps.PSD[0:r1])
+        noisePSDstd = np.std(step.nps.PSD[0:r1])
         check(noisePSDmean)
         check(noisePSDstd)
         check(std / noisePSDstd)
-        step.nps.avgPSD -= noisePSDmean
+        step.nps.PSD -= noisePSDmean
         # step.nps.GetSpectrum(showtimedomain=False, showfreqdomain=True, spectype='PSD')
 
         nu_a_index = step.nps.Hz2Index(step.axion.nu_a)
         # check(step.nps.Index2Hz(nu_a_index))
 
-        ax_amp = step.nps.avgPSD[nu_a_index] / std
+        ax_amp = step.nps.PSD[nu_a_index] / std
         # check(nu_a_index)
         # check(step.nps.avgPSD[nu_a_index])
         # check(np.amax(step.nps.avgPSD))
@@ -743,18 +743,18 @@ class dmScanStep:
         coupling strength g_aNN, linewidth.
         """
 
-        std = np.std(self.nps.avgPSD[self.r0 : self.r1])
+        std = np.std(self.nps.PSD[self.r0 : self.r1])
         threshold_std = 3.3
         threshold = threshold_std * std
         # Convert to non-negative values
         NonNegative_arr = np.where(
-            self.nps.avgPSD[self.r0 : self.r1] - threshold < 0,
+            self.nps.PSD[self.r0 : self.r1] - threshold < 0,
             0,
-            self.nps.avgPSD[self.r0 : self.r1] - threshold,
+            self.nps.PSD[self.r0 : self.r1] - threshold,
         )
 
         peaks, properties = find_peaks(
-            self.nps.avgPSD[self.r0 : self.r1],
+            self.nps.PSD[self.r0 : self.r1],
             height=threshold,
             distance=1,
             prominence=threshold,
@@ -778,7 +778,7 @@ class dmScanStep:
 
             NoPulsePSD_ax.plot(
                 self.Index2Hz(np.arange(self.r0, self.r1)),
-                self.nps.avgPSD[self.r0 : self.r1],
+                self.nps.PSD[self.r0 : self.r1],
                 color="tab:blue",
                 label="NoPulse PSD after MovAvg",
             )
@@ -793,13 +793,13 @@ class dmScanStep:
 
             CND_ax.plot(
                 self.Index2Hz(np.arange(self.r0, self.r1)),
-                self.nps.avgPSD[self.r0 : self.r1],
+                self.nps.PSD[self.r0 : self.r1],
                 color="tab:blue",
                 label="NoPulse PSD after MovAvg",
             )
             CND_ax.plot(
                 index2hz_r0offset(peaks),
-                self.nps.avgPSD[self.r0 + peaks],
+                self.nps.PSD[self.r0 + peaks],
                 "x",
                 color="tab:orange",
                 label="Candidate(s)",
@@ -808,8 +808,8 @@ class dmScanStep:
             # draw candidate(s)' height and width
             CND_ax.vlines(
                 x=index2hz_r0offset(peaks),
-                ymin=self.nps.avgPSD[self.r0 + peaks] - properties["prominences"],
-                ymax=self.nps.avgPSD[self.r0 + peaks],
+                ymin=self.nps.PSD[self.r0 + peaks] - properties["prominences"],
+                ymax=self.nps.PSD[self.r0 + peaks],
                 color="tab:orange",
             )
             CND_ax.hlines(
@@ -830,10 +830,10 @@ class dmScanStep:
             )
 
             numofbin_input = int(
-                3 * np.ceil(np.ptp(self.nps.avgPSD[self.r0 : self.r1]) / std)
+                3 * np.ceil(np.ptp(self.nps.PSD[self.r0 : self.r1]) / std)
             )
             hist, bin_edges = np.histogram(
-                self.nps.avgPSD[self.r0 : self.r1],
+                self.nps.PSD[self.r0 : self.r1],
                 bins=max(numofbin_input, 6),
                 density=False,
             )
@@ -4362,10 +4362,10 @@ def amp_ga_1iter(
         rand_phase=ifstochastic,
         # verbose=True
     )
-    step.nps.avgPSD = np.abs(step.nps.avgFFT) ** 2.0
+    step.nps.PSD = np.abs(step.nps.FFT) ** 2.0
     # step.nps.GetSpectrum(showtimedomain=False, showfreqdomain=True, spectype='PSD')
     if use_sg:
-        step.nps.avgPSD = step.nps.sgFilterPSD(
+        step.nps.PSD = step.nps.sgFilterPSD(
             window_length=step.axion.lw_p // sg_axlw_frac,
             polyorder=sg_order,
             makeplot=False,
@@ -4375,17 +4375,17 @@ def amp_ga_1iter(
     # step.nps.GetSpectrum(showtimedomain=False, showfreqdomain=True, spectype='PSD')
     r1 = step.nps.Hz2Index(step.axion.nu_a - 5.0 * step.axion.lw_Hz)
     # check(r1)
-    noisePSDmean = np.mean(step.nps.avgPSD[0:r1])
-    noisePSDstd = np.std(step.nps.avgPSD[0:r1])
+    noisePSDmean = np.mean(step.nps.PSD[0:r1])
+    noisePSDstd = np.std(step.nps.PSD[0:r1])
     # check(noisePSDmean)
     # check(noisePSDstd)
-    step.nps.avgPSD -= noisePSDmean
+    step.nps.PSD -= noisePSDmean
     # step.nps.GetSpectrum(showtimedomain=False, showfreqdomain=True, spectype='PSD')
 
     nu_a_index = step.nps.Hz2Index(step.axion.nu_a)
     # check(step.nps.Index2Hz(nu_a_index))
 
-    ax_amp = step.nps.avgPSD[nu_a_index] / std
+    ax_amp = step.nps.PSD[nu_a_index] / std
     # check(nu_a_index)
     # check(step.nps.avgPSD[nu_a_index])
     # check(np.amax(step.nps.avgPSD))

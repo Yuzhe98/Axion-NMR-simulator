@@ -1315,18 +1315,18 @@ def stdPSD(
 
 
 def stdLIAPSD(
-    data_x=None,
-    data_y=None,
-    samprate=None,
-    demodfreq:float=0.,
-    attenuation=0,
-    windowfunction="rectangle",
-    decayfactor=-10,
+    data_x:np.ndarray=None,
+    data_y:np.ndarray=None,
+    samprate:float=None,
+    demodfreq:float=None,
+    attenuation:str=0,
+    windowfunction:str="rectangle",
+    decayfactor:float=-10.0,
     showwindow=False,
-    DTRCfilter="off",
-    DTRCfilter_TC=1e-6,
-    DTRCfilter_order=8,
-    verbose=False,
+    DTRCfilter:str="off",
+    DTRCfilter_TC:float=1e-6,
+    DTRCfilter_order:float=8,
+    verbose:bool=False,
 ):
     """
     Return the frequency bin centers and power spectral density
@@ -1565,18 +1565,18 @@ def stdLIAPSD(
 
 
 def stdLIAFFT(
-    data_x=None,
-    data_y=None,
-    samprate=None,
-    dfreq=None,
-    attenuation=None,
-    windowfunction="rectangle",
-    decayfactor=-10.0,
+    data_x:np.ndarray=None,
+    data_y:np.ndarray=None,
+    samprate:float=None,
+    demodfreq:float=None,
+    attenuation:str=None,
+    windowfunction:str="rectangle",
+    decayfactor:float=-10.0,
     showwindow=False,
-    DTRCfilter="on",
-    DTRCfilter_TC=1e-6,
-    DTRCfilter_order=8,
-    verbose=False,
+    DTRCfilter:str="off",
+    DTRCfilter_TC:float=1e-6,
+    DTRCfilter_order:float=8,
+    verbose:bool=False,
 ):
     """
     Return the frequency bin centers and FFT results.
@@ -1785,7 +1785,7 @@ def stdLIAFFT(
     FFT = (
         10.0 ** (attenuation / 20.0) * 1.0 * (FFT / filtercomp) / (S2 * samprate) ** 0.5
     )
-    frequencies += dfreq  #
+    frequencies += demodfreq  #
     return np.sort(frequencies), FFT[np.argsort(frequencies)]
 
 

@@ -112,7 +112,7 @@ for ALPnuorder in [6]:
             Mt_list.append(np.sqrt(magnetization.avgMxsq + magnetization.avgMysq))
             processdata = False
             if processdata:
-                liastream = LIASignal(
+                liastream = DualChanSig(
                     name="LIA data",
                     device="LIA",
                     device_id="dev4434",
