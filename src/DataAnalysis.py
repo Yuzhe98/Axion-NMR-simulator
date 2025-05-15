@@ -145,12 +145,12 @@ FunctionParas = {
 
 
 # Signal class containing 2-channel data, data-processing methods and processed data
-@dataclass
+# @dataclass
 class DualChanSig:
-    demodfreq: float
-    samprate: float
-    dataX : NDArray[np.float64]
-    dataY: NDArray[np.float64]
+    # demodfreq: float
+    # samprate: float
+    # dataX : NDArray[np.float64]
+    # dataY: NDArray[np.float64]
     def __init__(
         self,
         name="Dual Channel Signal",

@@ -383,8 +383,8 @@ class MagField:
         """
         stream = DualChanSig(
             name="ALP field gradient",
-            device="Simulation",
-            device_id="Simulation",
+            # device="Simulation",
+            # device_id="Simulation",
             filelist=[],
             verbose=True,
         )
@@ -1851,7 +1851,7 @@ class Simulation:
 
     def MonitorTrajectory(
         self,
-        plotrate: float,  #
+        plotrate: float = None,  #
         verbose: bool = False,
     ):
         if plotrate is None:
@@ -2204,8 +2204,11 @@ class Simulation:
     def analyzeTrajectory(
         self,
     ):
+        type(DualChanSig)
+        print(DualChanSig)
+
         self.trjryStream = DualChanSig(
-            name="Simulation data",
+            # name="Simulation data",
             filelist=[],
             verbose=True,
         )
@@ -2261,8 +2264,8 @@ class Simulation:
     ):
         self.B1Stream = DualChanSig(
             name="Simulation data",
-            device="Simulation",
-            device_id="Simulation",
+            # device="Simulation",
+            # device_id="Simulation",
             filelist=[],
             verbose=True,
         )
