@@ -3,8 +3,16 @@ import sys
 
 # print(os.path.abspath(os.curdir))
 # os.chdir("..")  # go to parent folder
-# print(os.path.abspath(os.curdir))
+os.chdir("src")  # go to parent folder
+print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
+# Define the path to your folder
+# folder_path = "/src"
+
+# Insert it at the beginning of sys.path (so it has highest priority)
+# if folder_path not in sys.path:
+#     sys.path.insert(0, folder_path)
+
 
 import numpy as np
 import time
@@ -31,7 +39,7 @@ ExampleSample10MHzT = Sample(
     * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
     numofnuclei=1,  #
     tempunit="K",  # temperature scale
-    T2=0.1 / np.pi,  # [s]
+    T2=1000000 / np.pi,  # [s]
     T1=1e9,  # [s]
     pol=1,
     verbose=False,
@@ -67,9 +75,9 @@ simu.excField.setALP_Field(
     Brms=1e-10,  # RMS amplitude of the pseudo-magnetic field in [T]
     nu_a=(-0.7),  # frequency in the rotating frame
     # direction: np.ndarray,  #  = np.array([1, 0, 0])
-    use_stoch=False,
+    use_stoch=True,
     demodfreq=simu.demodfreq,
-    makeplot=False,
+    makeplot=True,
 )
 simu.excType = "ALP"
 toc = time.perf_counter()
@@ -80,7 +88,7 @@ simu.GenerateTrajectory(verbose=False)
 toc = time.perf_counter()
 # print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-# simu.MonitorTrajectory(verbose=True)
+simu.MonitorTrajectory(verbose=True)
 # simu.VisualizeTrajectory3D(
 #     plotrate=1e3,  # [Hz]
 #     # rotframe=True,
