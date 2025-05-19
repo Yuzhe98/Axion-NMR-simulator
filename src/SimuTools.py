@@ -314,7 +314,7 @@ class MagField:
             * duty_func(timeStamp)
             * np.dot(np.array([1, 0, 0]), direction_norm)
         )
-        check(Bx_envelope[0:10])
+        # check(Bx_envelope[0:10])
         Bx_envelope = np.multiply(
             Bx_envelope, np.cos(2 * np.pi * nu_rot * timeStamp + init_phase)
         )
@@ -328,7 +328,7 @@ class MagField:
             * duty_func(timeStamp)
             * np.dot(np.array([0, 1, 0]), direction_norm)
         )
-        check(By_envelope)
+        # check(By_envelope)
         By_envelope = np.multiply(
             By_envelope, np.sin(2 * np.pi * nu_rot * timeStamp + init_phase)
         )
