@@ -39,7 +39,7 @@ ExampleSample10MHzT = Sample(
     * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
     numofnuclei=1,  #
     tempunit="K",  # temperature scale
-    T2=1000000 / np.pi,  # [s]
+    T2=100 / np.pi,  # [s]
     T1=1e9,  # [s]
     pol=1,
     verbose=False,
@@ -62,7 +62,7 @@ simu = Simulation(
     demodfreq=1e6,
     B0z=(1e6) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
     simuRate=(500),  #
-    duration=200,
+    duration=300,
     excField=ALP_Field_grad,
     verbose=False,
 )

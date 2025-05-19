@@ -1,10 +1,8 @@
 import os
 import sys
 
-# print(os.path.abspath(os.curdir))
-# os.chdir("..")  # go to parent folder
-# os.chdir("..")  # go to parent folder
-# print(os.path.abspath(os.curdir))
+os.chdir("src")  # go to /src folder
+print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
 
 import numpy as np
@@ -64,12 +62,12 @@ simu.GenerateTrajectory(verbose=False)
 toc = time.perf_counter()
 print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-# simu.MonitorTrajectory(plotrate=None, verbose=True)
-# simu.VisualizeTrajectory3D(
-#     plotrate=None,  # [Hz]
-#     # rotframe=True,
-#     verbose=False,
-# )
+simu.MonitorTrajectory(plotrate=None, verbose=True)
+simu.VisualizeTrajectory3D(
+    plotrate=None,  # [Hz]
+    # rotframe=True,
+    verbose=False,
+)
 
 simu.analyzeTrajectory()
 
