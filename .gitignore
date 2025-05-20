@@ -10,7 +10,16 @@ venv/
 .vscode/
 .idea/
 
-# Ignore log files
+# Ignore Logs and data
 *.log
-__pycache__/functioncache.cpython-311.pyc
-__pycache__/SimuTools.cpython-311.pyc
+*.out
+*.err
+*.npy
+*.npz
+*.pkl
+*.h5
+*.hdf5
+*.csv
+*.tsv
+*.png
+*.jpg
