@@ -190,29 +190,29 @@ liquid_Xe129 = Sample(
     pol=0.5,
     verbose=False,
 )
-TestSample10MHzT = Sample(
-    name="TestSample",  # name of the atom/molecule
-    gyroratio=2
-    * np.pi
-    * (10)
-    * 10**6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
-    numofnuclei=1,  #
-    tempunit="K",  # temperature scale
-    boilpt=165.051,  # [K]
-    meltpt=161.40,  # [K]
-    density_liquid=2.942,  # [g/cm^3] at boiling point
-    density_gas=5.894 * 10**3,  # [g/cm^3] at STP
-    density_solid=None,  # [g/cm^3]
-    molarmass=131.2930,  # [g/mol]
-    spindenisty_liquid=None,  # [mol/cm^3]
-    spindenisty_gas=None,  # [g/cm^3] at STP
-    spindenisty_solid=None,  # [mol/cm^3]
-    shareofpeaks=[1.0],  # array or list.
-    T2=None,  # [s]
-    T1=1000,  # [s]
-    pol=1,
-    verbose=False,
-)
+# TestSample10MHzT = Sample(
+#     name="TestSample",  # name of the atom/molecule
+#     gyroratio=2
+#     * np.pi
+#     * (10)
+#     * 10**6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
+#     numofnuclei=1,  #
+#     tempunit="K",  # temperature scale
+#     boilpt=165.051,  # [K]
+#     meltpt=161.40,  # [K]
+#     density_liquid=2.942,  # [g/cm^3] at boiling point
+#     density_gas=5.894 * 10**3,  # [g/cm^3] at STP
+#     density_solid=None,  # [g/cm^3]
+#     molarmass=131.2930,  # [g/mol]
+#     spindenisty_liquid=None,  # [mol/cm^3]
+#     spindenisty_gas=None,  # [g/cm^3] at STP
+#     spindenisty_solid=None,  # [mol/cm^3]
+#     shareofpeaks=[1.0],  # array or list.
+#     T2=None,  # [s]
+#     T1=1000,  # [s]
+#     pol=1,
+#     verbose=False,
+# )
 Methanol = Sample(
     name="12C Methanol",  # name of the atom/molecule
     gyroratio=2
@@ -446,6 +446,7 @@ class MagField:
         use_stoch: bool,
         # direction: np.ndarray,  #  = np.array([1, 0, 0])
         demodfreq: float,
+        rand_seed: int = None,
         makeplot: bool = False,
         verbose: bool = False,
     ):
@@ -775,11 +776,35 @@ class MagField:
                 case="grad_perp",
                 alpha=0.0,
             )
+            rng = (
+                np.random.default_rng(seed=rand_seed) if rand_seed is not None else None
+            )
 
-            rvs_amp = expon.rvs(loc=0.0, scale=1.0, size=timeLen)
+            rvs_amp = expon.rvs(loc=0.0, scale=1.0, size=timeLen, random_state=rng)
             # rvs_amp = 1.0
-            rvs_phase = np.exp(1j * uniform.rvs(loc=0, scale=2 * np.pi, size=timeLen))
+
+            rvs_phase = np.exp(
+                1j * uniform.rvs(loc=0, scale=2 * np.pi, size=timeLen, random_state=rng)
+            )
             # rvs_phase = 1.0
+
+            """
+            if rand_seed is not None:
+                base_rng = np.random.default_rng(seed=rand_seed)
+                rng_amp = np.random.default_rng(base_rng.integers(0, 2**32))
+                rng_phase = np.random.default_rng(base_rng.integers(0, 2**32))
+            else:
+                rng_amp = None
+                rng_phase = None
+
+            rvs_amp = expon.rvs(loc=0.0, scale=1.0, size=timeLen, random_state=rng_amp)
+            # rvs_amp = 1.0
+
+            rvs_phase = np.exp(
+                1j * uniform.rvs(loc=0, scale=2 * np.pi, size=timeLen, random_state=rng_phase)
+            )
+            # rvs_phase = 1.0
+            """
 
             if use_stoch:
                 ax_sq_lineshape = lineshape * rvs_amp
@@ -1878,18 +1903,19 @@ class Simulation:
             ),
             axis=0,
         )
-        fig = plt.figure(figsize=(15*0.8, 7*0.8), dpi=150)  #
+        fig = plt.figure(figsize=(15 * 0.8, 7 * 0.8), dpi=150)  #
         gs = gridspec.GridSpec(nrows=2, ncols=4)  #
         # fix the margins
-        left=0.056
-        bottom=0.1
-        right=0.985
-        top=0.924
-        wspace=0.313
-        hspace=0.127
-        fig.subplots_adjust(left=left, top=top, right=right,
-                            bottom=bottom, wspace=wspace, hspace=hspace)
-        
+        left = 0.056
+        bottom = 0.1
+        right = 0.985
+        top = 0.924
+        wspace = 0.313
+        hspace = 0.127
+        fig.subplots_adjust(
+            left=left, top=top, right=right, bottom=bottom, wspace=wspace, hspace=hspace
+        )
+
         BALPamp_ax = fig.add_subplot(gs[0, 0])
         Mxy_ax = fig.add_subplot(gs[0, 1], sharex=BALPamp_ax)
         Mz_ax = fig.add_subplot(gs[1, 1], sharex=BALPamp_ax)
@@ -1968,7 +1994,7 @@ class Simulation:
         )
         Mz_ax.legend(loc="upper right")
         Mz_ax.grid()
-        Mz_ax.set_xlabel('time [s]')
+        Mz_ax.set_xlabel("time [s]")
         Mz_ax.set_ylabel("")
         Mz_ax.set_ylim(0, 1.1)
 
