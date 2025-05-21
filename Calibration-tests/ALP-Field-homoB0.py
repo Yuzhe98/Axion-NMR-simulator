@@ -1,9 +1,10 @@
 import os
 import sys
 
-os.chdir("src")  # go to parent folder
+os.chdir("src")  # go to /src folder
 print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
+os.chdir("..")  # go back to parent folder
 
 import numpy as np
 import time
