@@ -811,9 +811,11 @@ class MagField:
             else:
                 ax_sq_lineshape = lineshape
             ax_lineshape = np.sqrt(ax_sq_lineshape)
-
+            # check(np.mean(ax_lineshape))
+            
             # inverse FFT method
             ax_FFT = Brms * ax_lineshape * rvs_phase
+            # check(np.mean(np.abs(ax_FFT)))
             length = len(ax_FFT)
             ax_FFT_pos_neg = np.array(
                 [ax_FFT[length // 2 :], ax_FFT[: length // 2]]
@@ -822,6 +824,8 @@ class MagField:
 
             Ba_t = np.fft.ifft(ax_FFT_pos_neg)
             Bx_amp, By_amp = np.real(Ba_t), np.imag(Ba_t)
+            # check(np.mean(np.abs(Bx_amp)))
+            # check(np.mean(np.abs(By_amp)))
             N = len(ax_FFT)
             freq = np.fft.fftfreq(N, timeStep)
             dBadt_FFT = 1j * 2 * np.pi * freq * ax_FFT_pos_neg
