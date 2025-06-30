@@ -1,87 +1,33 @@
 import numpy as np
-import time
-from SimuTools import Sample, MagField, Simulation, gate
-from DataAnalysis import DualChanSig
-from functioncache import check
+import matplotlib.pyplot as plt
 
-ExampleSample10MHzT = Sample(
-    name="TestSample",  # name of the atom/molecule
-    gyroratio=2
-    * np.pi
-    * (10)
-    * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
-    numofnuclei=1,  #
-    tempunit="K",  # temperature scale
-    T2=1 / np.pi,  # [s]
-    T1=1000,  # [s]
-    pol=1,
-    verbose=False,
-)
 
-ALP_Field_grad = MagField(
-    name="ALP field gradient"
-)  # excitation field in the rotating frame
-# excField.nu = 1e6 - 10  # [Hz]
+T2 = 1
+timeStamp = np.linspace(0, 4, num=500)
+decaySignal = np.empty((len(timeStamp), len(timeStamp)))
+for i, decay_1D in enumerate(decaySignal):
+    decay_1D = np.exp(-timeStamp / T2) * np.sin(
+        2 * np.pi * 10 * timeStamp + i * 2 * np.pi / 100
+    )
+# Create a simple 2D signal: white square in black background
+image = decaySignal
+# image[24:40, 24:40] = 1  # white square
 
-simu = Simulation(
-    name="TestSample 10MHzT",
-    sample=ExampleSample10MHzT,  # class Sample
-    # gyroratio=(2*np.pi)*11.777*10**6,  # [Hz/T]
-    init_time=0.0,  # [s]
-    station=None,
-    init_mag_amp=1.0,
-    init_M_theta=0.0,  # [rad]
-    init_M_phi=0.0,  # [rad]
-    demodfreq=1e6,
-    B0z=(1e6) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
-    simuRate=(6696.42871094),  #
-    duration=10,
-    excField=ALP_Field_grad,
-    verbose=False,
-)
+# Apply 2D FFT
+f_image = np.fft.fft2(image)
 
-tic = time.perf_counter()
-check(simu.demodfreq)
-simu.excField.setALP_Field(
-    method="inverse-FFT",
-    timeStamp=simu.timeStamp,
-    Brms=1e-8,  # RMS amplitude of the pseudo-magnetic field in [T]
-    nu_a=(5),  # frequency in the rotating frame
-    # direction: np.ndarray,  #  = np.array([1, 0, 0])
-    use_stoch=False,
-    demodfreq=simu.demodfreq,
-    makeplot=True,
-)
-simu.excType = "ALP"
-toc = time.perf_counter()
-print(f"setALP_Field() time consumption = {toc-tic:.3f} s")
+# Shift the zero-frequency component to the center
+f_image_shifted = np.fft.fftshift(f_image)
 
-# tic = time.perf_counter()
-# simu.GenerateTrajectory(verbose=False)
-# toc = time.perf_counter()
-# print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
+# Visualize
+plt.figure(figsize=(10,4))
+plt.subplot(1,2,1)
+plt.imshow(image, cmap='gray')
+plt.title("Original Image")
+plt.axis('off')
 
-# simu.MonitorTrajectory(plotrate=133, verbose=True)
-# simu.VisualizeTrajectory3D(
-#     plotrate=1e3,  # [Hz]
-#     # rotframe=True,
-#     verbose=False,
-# )
-
-# simu.analyzeTrajectory()
-
-# specxaxis, spectrum, specxunit, specyunit = simu.trjryStream.GetSpectrum(
-#     showtimedomain=True,
-#     showfit=True,
-#     showresidual=False,
-#     showlegend=True,  # !!!!!show or not to show legend
-#     spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
-#     ampunit="V",
-#     specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
-#     specxlim=[simu.demodfreq - 0 , simu.demodfreq + 20],
-#     # specylim=[0, 4e-23],
-#     specyscale="linear",  # 'log', 'linear'
-#     showstd=False,
-#     showplt_opt=True,
-#     return_opt=True,
-# )
+plt.subplot(1,2,2)
+plt.imshow(np.log(1 + np.abs(f_image_shifted)), cmap='gray')
+plt.title("Magnitude Spectrum (log scale)")
+plt.axis('off')
+plt.show()

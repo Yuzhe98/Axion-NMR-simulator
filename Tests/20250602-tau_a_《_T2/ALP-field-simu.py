@@ -20,7 +20,7 @@ from functioncache import check, GiveDateandTime
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-num_runs = 1000
+num_runs = 1
 simuRate = 500  #
 duration = 100
 timeLen = int(simuRate * duration)
@@ -44,7 +44,7 @@ timestr = GiveDateandTime()
 
 # # Store metadata in DataFrame attributes (won't save in CSV, but can save in pickle)
 # df.attrs["timeStamp"] = simu.timeStamp
-# df.attrs["theta"] = [results]
+# df.attrs["m_transverse"] = [results]
 # df.attrs["simuRate"] = simuRate
 # df.attrs["duration"] = duration
 
@@ -108,7 +108,7 @@ for i in range(num_runs):
     # toc = time.perf_counter()
     # print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-    # simu.MonitorTrajectory(verbose=True)
+    simu.MonitorTrajectory(verbose=True)
     # simu.VisualizeTrajectory3D(
     #     plotrate=1e3,  # [Hz]
     #     # rotframe=True,
@@ -125,44 +125,8 @@ for i in range(num_runs):
     # simu.compareBandSig()
 
     # normalized magnetization
-    sin_theta = np.sqrt(simu.trjry[0:-1, 0] ** 2 + simu.trjry[0:-1, 1] ** 2)
+    m_t = np.sqrt(simu.trjry[0:-1, 0] ** 2 + simu.trjry[0:-1, 1] ** 2)
 
-    # theta = run_simulation(rand_seed)
-    results[i] = sin_theta
-    # np.save(f"theta_run_{i}.npy", theta)
-
-
-# comment = f"Transverse magnetization. simuRate: {simuRate}"
-data_file_name = savedir + f"theta_all_runs_" + timestr + ".npz"
-np.savez(
-    data_file_name,
-    timeStamp=simu.timeStamp,
-    sin_theta=results,
-    simuRate=simuRate,
-    duration=duration,
-    demodfreq=demodfreq,
-    T2=T2,
-    T1=T1,
-    Brms=Brms,
-    nu_a=nu_a,
-    use_stoch=True,
-    gyroratio=ExampleSample10MHzT.gyroratio,
-)
-
-
-# np.save(savedir + f"theta_all_runs_" + timestr + ".npy", results)
-
-
-# # Sample data
-# theta = np.random.rand(1000)
-# simuRate = 1000
-# duration = 1.0
-
-
-# # Save DataFrame as pickle (preserves attrs)
-
-# data_file_name = savedir + f"theta_all_runs_" + timestr + ".pkl"
-# df.to_pickle(data_file_name)
-
-# with open(data_file_name, "wb") as f:
-#     pickle.dump({"df": df, "theta": results}, f)
+    # m_transverse = run_simulation(rand_seed)
+    # results[i] = m_t
+    # np.save(f"m_transverse_run_{i}.npy", m_transverse)
