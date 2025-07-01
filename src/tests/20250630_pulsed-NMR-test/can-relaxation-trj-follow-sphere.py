@@ -19,8 +19,8 @@ ExampleSample10MHzT = Sample(
     * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
     numofnuclei=1,  #
     tempunit="K",  # temperature scale
-    T2=1,  # [s]
-    T1=.5,  # [s]
+    T2=50,  # [s]
+    T1=50,  # [s]
     pol=1,
     verbose=False,
 )
@@ -39,17 +39,18 @@ simu = Simulation(
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
     demodfreq=1e6,
-    B0z=(1e6 - 10) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
-    simuRate=(1e4),  #
-    duration=2,
+    B0z=(1e6 - 100) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
+    simuRate=(1e5),  #
+    duration=0.1,
     excField=excField,
     verbose=False,
 )
 
 simu.generatePulseExcitation(
-    pulseDur=20.0 * simu.timeStep,
+    pulseDur=10000.0 * simu.timeStep,
     tipAngle=np.pi / 1,
-    direction=np.array([1, 0, 0]),  # along x-axis
+    nu_rot=100,
+    # direction=np.array([1, 0, 0]),  # along x-axis
     showplt=False,  # whether to plot B_ALP
     plotrate=None,
     verbose=False,
