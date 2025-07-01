@@ -291,13 +291,13 @@ class MagField:
         self.name = name
         self.nu = None
 
-    def setPulse(
+    def setXYPulse(
         self,
         timeStamp: np.ndarray,
         B1: float,  # amplitude of the excitation pulse in [T]
         nu_rot: float,
         init_phase: float,
-        direction: np.ndarray,  #  = np.array([1, 0, 0])
+        direction: np.ndarray,  #  not needed now
         duty_func,
         verbose: bool = False,
     ):
@@ -312,7 +312,7 @@ class MagField:
             / 2
             * B1
             * duty_func(timeStamp)
-            * np.dot(np.array([1, 0, 0]), direction_norm)
+            # * np.dot(np.array([1, 0, 0]), direction_norm)
         )
         # check(Bx_envelope[0:10])
         Bx_envelope = np.multiply(
@@ -326,7 +326,7 @@ class MagField:
             / 2
             * B1
             * duty_func(timeStamp)
-            * np.dot(np.array([0, 1, 0]), direction_norm)
+            # * np.dot(np.array([0, 1, 0]), direction_norm)
         )
         # check(By_envelope)
         By_envelope = np.multiply(
@@ -340,7 +340,7 @@ class MagField:
             / 2
             * B1
             * duty_func(timeStamp)
-            * np.dot(np.array([1, 0, 0]), direction_norm)
+            # * np.dot(np.array([1, 0, 0]), direction_norm)
         )
         dBxdt_envelope = np.multiply(
             dBxdt_envelope,
@@ -354,7 +354,7 @@ class MagField:
             / 2
             * B1
             * duty_func(timeStamp)
-            * np.dot(np.array([0, 1, 0]), direction_norm)
+            # * np.dot(np.array([0, 1, 0]), direction_norm)
         )
         dBydt_envelope = np.multiply(
             dBydt_envelope,
@@ -1684,6 +1684,7 @@ class Simulation:
         pulseDur: float = 100e-6,
         tipAngle: float = np.pi / 2,
         direction: np.ndarray = np.array([1, 0, 0]),
+        nu_rot: float = None,
         showplt: bool = False,  # whether to plot B_ALP
         plotrate: float = None,
         verbose: bool = False,
@@ -1691,11 +1692,12 @@ class Simulation:
         self.excType = "pulse"
         B1 = 2 * tipAngle / (self.sample.gyroratio * pulseDur)
         duty_func = partial(gate, start=0, stop=pulseDur)
-
-        self.excField.setPulse(
+        if nu_rot is None:
+            nu_rot = self.excField.nu - self.demodfreq
+        self.excField.setXYPulse(
             timeStamp=self.timeStamp,
             B1=B1,  # amplitude of the excitation pulse in [T]
-            nu_rot=self.excField.nu - self.demodfreq,  # Hz
+            nu_rot=nu_rot,  # Hz
             init_phase=0,
             direction=direction,
             duty_func=duty_func,
