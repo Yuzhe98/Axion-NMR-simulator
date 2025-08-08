@@ -26,7 +26,9 @@ ExampleSample10MHzT = Sample(
     verbose=False,
 )
 
-ALP_Field_grad = MagField(name="ALP field gradient")  # excitation field in the rotating frame
+ALP_Field_grad = MagField(
+    name="ALP field gradient"
+)  # excitation field in the rotating frame
 
 simu = Simulation(
     name="TestSample 10MHzT",
@@ -47,14 +49,15 @@ simu = Simulation(
 
 tic = time.perf_counter()
 simu.excField.setALP_Field(
-    method='time-interfer',
-        timeStamp=simu.timeStamp,
-        Brms=1e-15,  # RMS amplitude of the pseudo-magnetic field in [T]
-        nu_a=(-0.5),  # frequency in the rotating frame
-        # direction: np.ndarray,  #  = np.array([1, 0, 0])
-        use_stoch=False,
-        demodfreq=simu.demodfreq,
-        makeplot=False)
+    method="time-interfer",
+    timeStamp=simu.timeStamp,
+    Bamp=1e-15,  # RMS amplitude of the pseudo-magnetic field in [T]
+    nu_a=(-0.5),  # frequency in the rotating frame
+    # direction: np.ndarray,  #  = np.array([1, 0, 0])
+    use_stoch=False,
+    demodfreq=simu.demodfreq,
+    makeplot=False,
+)
 simu.excType = "ALP"
 toc = time.perf_counter()
 print(f"setALP_Field() time consumption = {toc-tic:.3f} s")
@@ -74,7 +77,7 @@ simu.VisualizeTrajectory3D(
 
 tau_a = 1e6 / np.abs(simu.excField.nu + simu.demodfreq)
 check(tau_a)
-check(1/(np.pi * np.sqrt(simu.sample.T2 * tau_a)))
+check(1 / (np.pi * np.sqrt(simu.sample.T2 * tau_a)))
 simu.analyzeTrajectory()
 specxaxis, spectrum, specxunit, specyunit = simu.trjryStream.GetSpectrum(
     showtimedomain=True,
@@ -84,7 +87,7 @@ specxaxis, spectrum, specxunit, specyunit = simu.trjryStream.GetSpectrum(
     spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
     ampunit="V",
     specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
-    specxlim=[simu.demodfreq - 5 , simu.demodfreq + 12],
+    specxlim=[simu.demodfreq - 5, simu.demodfreq + 12],
     # specylim=[0, 4e-23],
     specyscale="linear",  # 'log', 'linear'
     showstd=False,

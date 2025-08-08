@@ -4,7 +4,7 @@ import sys
 from torch import dtype
 
 os.chdir("src")  # go to parent folder
-print(os.path.abspath(os.curdir))
+# print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
 
 import pandas as pd
@@ -20,9 +20,9 @@ from functioncache import check, GiveDateandTime
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-num_runs = 1
+num_runs = 2
 simuRate = 500  #
-duration = 100
+duration = 1
 timeLen = int(simuRate * duration)
 
 results = np.empty(
@@ -70,7 +70,6 @@ simu = Simulation(
     sample=ExampleSample10MHzT,  # class Sample
     # gyroratio=(2*np.pi)*11.777*10**6,  # [Hz/T]
     init_time=0.0,  # [s]
-    station=None,
     init_mag_amp=1.0,
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
@@ -82,9 +81,10 @@ simu = Simulation(
     verbose=False,
 )
 
+B_rms_from_simu_arr = []
 
 for i in range(num_runs):
-    rand_seed = i
+    # rand_seed = i
 
     # tic = time.perf_counter()
     # check(simu.demodfreq)
@@ -93,38 +93,20 @@ for i in range(num_runs):
         timeStamp=simu.timeStamp,
         Bamp=Bamp,  # RMS amplitude of the pseudo-magnetic field in [T]
         nu_a=nu_a,  # frequency in the rotating frame
+        # direction: np.ndarray,  #  = np.array([1, 0, 0])
         use_stoch=use_stoch,
         demodfreq=simu.demodfreq,
+        # rand_seed=rand_seed,
         makeplot=False,
     )
     simu.excType = "ALP"
-    # toc = time.perf_counter()
-    # print(f"setALP_Field() time consumption = {toc-tic:.3f} s")
-
-    # tic = time.perf_counter()
-    simu.GenerateTrajectory(verbose=False)
-    # toc = time.perf_counter()
-    # print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
-
-    simu.MonitorTrajectory(verbose=True)
-    # simu.VisualizeTrajectory3D(
-    #     plotrate=1e3,  # [Hz]
-    #     # rotframe=True,
-    #     verbose=False,
+    # B_rms_from_simu = (
+    #     np.mean(simu.excField.B_vec[:, 0] ** 2 + simu.excField.B_vec[:, 1] ** 2) ** 0.5
     # )
-    # Delta_nu_a = 1.2  # Hz
-    # tau_a = 1 / (np.pi * Delta_nu_a)
-    # T2 = simu.sample.T2
-    # tau = np.sqrt(tau_a * T2)
-    # # check(tau)
-    # check(1 / (np.pi * T2))
-    # check(1 / (np.pi * tau))
-    # check(1 / (tau))
-    # simu.compareBandSig()
+    B_rms_from_simu = np.mean(np.abs(simu.excField.B_vec[:, 0])**2) ** 0.5
+    check(B_rms_from_simu)
+    B_rms_from_simu_arr.append(B_rms_from_simu)
 
-    # normalized magnetization
-    m_t = np.sqrt(simu.trjry[0:-1, 0] ** 2 + simu.trjry[0:-1, 1] ** 2)
-
-    # m_transverse = run_simulation(rand_seed)
-    # results[i] = m_t
-    # np.save(f"m_transverse_run_{i}.npy", m_transverse)
+B_rms_from_simu_arr = np.array(B_rms_from_simu_arr)
+check(np.mean(B_rms_from_simu_arr))
+check(np.std(B_rms_from_simu_arr))

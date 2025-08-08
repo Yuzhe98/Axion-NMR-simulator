@@ -49,4 +49,19 @@ $\theta^2 \propto \lambda(\nu)$
 
 or more precisely:
 
-$\theta^2 \approx (\gamma B_a)^2\, \lambda(\nu)$
+$\theta^2 \approx (\gamma B_a)^2\, \lambda(\nu)$ nono this is not right. check its unit! 
+
+### 2025-08-08
+
+#### magnitude test
+
+How to quantitvely evaluate the effect of axion field? Here I do not consider the T2*, but only detuning $\Delta\nu$, $\tau_a$, and $T_2$. Assuming measurement time much longer than any one of the times above. 
+
+We expected
+
+$\theta^2 \approx (\gamma B_a T_2)^2\, \lambda(\nu)$ when $T_2 \ll \tau_a$
+
+$\theta^2 \approx^? (\gamma B_a )^2 \tau_a T_2\, \lambda(\nu)$ when $\tau_a\ll T_2\ll T_\mathrm{meas}$. 
+
+Let us verify these. 
+

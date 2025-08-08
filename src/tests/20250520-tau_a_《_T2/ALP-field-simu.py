@@ -91,7 +91,7 @@ for i in range(num_runs):
     simu.excField.setALP_Field(
         method="inverse-FFT",
         timeStamp=simu.timeStamp,
-        Brms=Brms,  # RMS amplitude of the pseudo-magnetic field in [T]
+        Bamp=Brms,  # RMS amplitude of the pseudo-magnetic field in [T]
         nu_a=nu_a,  # frequency in the rotating frame
         # direction: np.ndarray,  #  = np.array([1, 0, 0])
         use_stoch=use_stoch,

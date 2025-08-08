@@ -54,7 +54,7 @@ tic = time.perf_counter()
 simu.excField.setALP_Field(
     method="inverse-FFT",
     timeStamp=simu.timeStamp,
-    Brms=1e-10,  # RMS amplitude of the pseudo-magnetic field in [T]
+    Bamp=1e-10,  # RMS amplitude of the pseudo-magnetic field in [T]
     nu_a=(-0.7),  # frequency in the rotating frame
     # direction: np.ndarray,  #  = np.array([1, 0, 0])
     use_stoch=True,
