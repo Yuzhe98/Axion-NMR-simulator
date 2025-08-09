@@ -1,28 +1,27 @@
 import os
 import sys
 
-from torch import dtype
 
 os.chdir("src")  # go to parent folder
 # print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
 
-import pandas as pd
-import pickle
+# import pandas as pd
+# import pickle
 
 import numpy as np
 import time
 from SimuTools import Sample, MagField, Simulation, gate
-from DataAnalysis import DualChanSig
+# from DataAnalysis import DualChanSig
 from functioncache import check, GiveDateandTime
 
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-num_runs = 2
+num_runs = 20
 simuRate = 500  #
-duration = 1
+duration = 20
 timeLen = int(simuRate * duration)
 
 results = np.empty(
@@ -37,7 +36,7 @@ Bamp = 1e-10
 nu_a = -0.7
 use_stoch = True
 
-savedir = rf"C:\Users\zhenf\D\Mainz\CASPEr\20250520-tau_a_《_T2/"
+savedir = ""
 timestr = GiveDateandTime()
 # # Create DataFrame with time and data columns
 # df = pd.DataFrame({"name": ["ALP field simulation"]})
@@ -104,7 +103,7 @@ for i in range(num_runs):
     #     np.mean(simu.excField.B_vec[:, 0] ** 2 + simu.excField.B_vec[:, 1] ** 2) ** 0.5
     # )
     B_rms_from_simu = np.mean(np.abs(simu.excField.B_vec[:, 0])**2) ** 0.5
-    check(B_rms_from_simu)
+    # check(B_rms_from_simu)
     B_rms_from_simu_arr.append(B_rms_from_simu)
 
 B_rms_from_simu_arr = np.array(B_rms_from_simu_arr)

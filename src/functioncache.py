@@ -1,5 +1,3 @@
-# from cmath import cos
-# import imp
 import inspect  # for check()
 import re  # for check()
 import time, datetime
@@ -14,17 +12,13 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.ticker as mticker
 from matplotlib.patches import FancyArrowPatch
-from mpl_toolkits.mplot3d import Axes3D
+# from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d import proj3d
-from astropy.time import Time
+# from astropy.time import Time
 from datetime import datetime
 from tqdm import tqdm
 import random
 from itertools import product
-
-
-# import TASSLE.tassle.axion_wind as wind
-# from TASSLE.tassle.axion_generator import Axion
 
 from functools import partial
 
@@ -34,12 +28,12 @@ from scipy.stats import rayleigh, uniform, norm, chi2, gamma
 # import numba as nb
 # from numba import jit, vectorize
 from math import sin, cos, sqrt
-import pyautogui
+# import pyautogui
 
 # from DataAnalysis import LIASignal, SQUID
 import pandas as pd
-from evidently.report import Report
-from evidently.metric_preset import DataDriftPreset
+# from evidently.report import Report
+# from evidently.metric_preset import DataDriftPreset
 
 
 def GiveDateandTime():
@@ -3254,23 +3248,6 @@ def read_double_precision_floats(file_path):
     return doubles
 
 
-def find_matching_tuples(lists, margin):  # this one might not work as intended
-    if not lists:
-        print("invalid input")
-        return []
-
-    # Generate all possible combinations of one element from each sublist
-    candidate_tuples = product(*lists)
-
-    # Filter tuples to check if they are present in all sublists within the margin
-    result = []
-    for candidate in candidate_tuples:
-        # check(candidate)
-        if np.abs(np.max(candidate) - np.min(candidate)) <= margin:
-            # if all(is_within_margin(val, sublist, margin) for val, sublist in zip(candidate, lists)):
-            result.append(candidate)
-
-    return result
 
 
 def find_consistent_candidates(fCNDs, margin):

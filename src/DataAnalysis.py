@@ -2937,7 +2937,7 @@ class DualChanSig:
                 self.residualval
             )
         if getchisq:
-            self.fitreport += "$\chi^2$ = {:.2e}\n".format(self.chisq)
+            self.fitreport += r"$\chi^2$ = {:.2e}\n".format(self.chisq)
 
         # self.fitreport = self.fitreport[:-1]
         self.fitrange = [ar[0], ar[1]]
@@ -5401,19 +5401,19 @@ class DualChanSig:
             if spectype == "PSD".upper():
                 self.spectrum = self.PSD
                 ampfactor = 1.0
-                specyunit = "$V^2/\\mathrm{Hz}$"
+                specyunit = r"$V^2/\\mathrm{Hz}$"
             elif spectype == "ASD".upper():
                 self.spectrum = np.sqrt(self.PSD)
                 ampfactor = 1.0
-                specyunit = "$V/\sqrt{\\mathrm{Hz}}$"
+                specyunit = r"$V/\sqrt{\\mathrm{Hz}}$"
             elif spectype == "FluxPSD".upper() and ampunit != "expPhi".upper():
                 ampfactor = (Mf / Rf) ** 2
                 self.spectrum = self.PSD * ampfactor
-                specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
+                specyunit = r"$\Phi_{0}^{2}/\\mathrm{Hz}$"
             elif spectype == "FluxASD".upper() and ampunit != "expPhi".upper():
                 ampfactor = Mf / Rf
                 self.spectrum = np.sqrt(self.PSD) * ampfactor
-                specyunit = "$\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
+                specyunit = r"$\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
 
             elif ampunit == "expPhi".upper():
                 ampfactor = (Mf / Rf) ** 2
@@ -5423,18 +5423,18 @@ class DualChanSig:
                     self.spectrum = 10 ** (-amppow) * ampfactor * self.PSD
                     # determine the unit of the spectrum
                     if amppow == 0:
-                        specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
+                        specyunit = r"$\Phi_{0}^{2}/\\mathrm{Hz}$"
                     else:
-                        specyunit = "$10^{%d}\ \\Phi_{0}^{2}/\\mathrm{Hz}$" % (amppow)
+                        specyunit = r"$10^{%d}\ \\Phi_{0}^{2}/\\mathrm{Hz}$" % (amppow)
                 elif spectype == "FluxASD".upper():
                     if amppow is None:
                         self.spectrum = np.sqrt(self.PSD * ampfactor)
                         amppow = int(np.log10(np.amax(self.spectrum)) - 1)
                     self.spectrum = 10 ** (-amppow) * np.sqrt(self.PSD * ampfactor)
                     if amppow == 0:
-                        specyunit = "$\\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
+                        specyunit = r"$\\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
                     else:
-                        specyunit = "$10^{%d}\ \\Phi_{0}/\sqrt{\\mathrm{Hz}}$" % (
+                        specyunit = r"$10^{%d}\ \\Phi_{0}/\sqrt{\\mathrm{Hz}}$" % (
                             amppow
                         )
                 else:
@@ -5747,26 +5747,26 @@ class DualChanSig:
             if spectype.upper() == "PSD".upper():
                 ampfactor = 1
                 self.spectrum = self.PSD * ampfactor**2
-                specyunit = "$V^2/\\mathrm{Hz}$"
+                specyunit = r"$V^2/\\mathrm{Hz}$"
             elif spectype.upper() == "ASD".upper():
                 ampfactor = 1
                 self.spectrum = np.sqrt(self.PSD) * ampfactor
-                specyunit = "$V/\sqrt{\\mathrm{Hz}}$"
+                specyunit = r"$V/\sqrt{\\mathrm{Hz}}$"
             else:
                 raise ValueError("spectype wrong 315")
         elif ampunit.upper() == "Phi".upper():
             if spectype.upper() == "FluxPSD".upper():
                 ampfactor = (Mf / Rf) ** 2
                 self.spectrum = self.PSD * ampfactor
-                specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
+                specyunit = r"$\Phi_{0}^{2}/\\mathrm{Hz}$"
             elif spectype.upper() == "PSD".upper():
                 ampfactor = (Mf / Rf) ** 2
                 self.spectrum = self.PSD * ampfactor
-                specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
+                specyunit = r"$\Phi_{0}^{2}/\\mathrm{Hz}$"
             elif spectype.upper() == "FluxASD".upper():
                 ampfactor = Mf / Rf
                 self.spectrum = np.sqrt(self.PSD) * ampfactor
-                specyunit = "$\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
+                specyunit = r"$\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
             else:
                 raise ValueError("spectype wrong 316")
         elif ampunit.upper() in [
@@ -5780,11 +5780,11 @@ class DualChanSig:
             if spectype.upper() == "PSD".upper():
                 ampfactor = 1e12
                 self.spectrum = self.PSD * ampfactor
-                specyunit = "$\mu V^2/\\mathrm{Hz}$"
+                specyunit = r"$\mu V^2/\\mathrm{Hz}$"
             elif spectype.upper() == "ASD".upper():
                 ampfactor = 1e6
                 self.spectrum = np.sqrt(self.PSD) * ampfactor
-                specyunit = "$\mu V/\sqrt{\\mathrm{Hz}}$"
+                specyunit = r"$\mu V/\sqrt{\\mathrm{Hz}}$"
             else:
                 raise ValueError("spectype wrong 313")
         elif ampunit.upper() in [
@@ -5798,11 +5798,11 @@ class DualChanSig:
             if spectype.upper() == "FluxPSD".upper():
                 ampfactor = (Mf / Rf * 1e6) ** 2
                 self.spectrum = self.PSD * ampfactor
-                specyunit = "$\mu \Phi_{0}^{2}/\\mathrm{Hz}$"
+                specyunit = r"$\mu \Phi_{0}^{2}/\\mathrm{Hz}$"
             elif spectype.upper() == "FluxASD".upper():
                 ampfactor = Mf / Rf * 1e6
                 self.spectrum = np.sqrt(self.PSD) * ampfactor
-                specyunit = "$\mu \Phi_{0}/\sqrt{\\mathrm{Hz}}$"
+                specyunit = r"$\mu \Phi_{0}/\sqrt{\\mathrm{Hz}}$"
             else:
                 raise ValueError("spectype wrong 314")
         elif ampunit.upper() == "expPhi".upper():
@@ -5813,9 +5813,9 @@ class DualChanSig:
                 self.spectrum = 10 ** (amppow) * ampfactor * self.PSD
                 # produce the unit of spectrum
                 if amppow == 0:
-                    specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
+                    specyunit = r"$\Phi_{0}^{2}/\\mathrm{Hz}$"
                 else:
-                    specyunit = "$10^{%d}\ \\Phi_{0}^{2}/\\mathrm{Hz}$" % (amppow)
+                    specyunit = r"$10^{%d}\ \\Phi_{0}^{2}/\\mathrm{Hz}$" % (amppow)
             elif spectype.upper() == "Power Spectral Density".upper():
                 ampfactor = (Mf / Rf) ** 2
                 if amppow is None:
@@ -5823,9 +5823,9 @@ class DualChanSig:
                 self.spectrum = 10 ** (amppow) * ampfactor * self.PSD
                 # produce the unit of spectrum
                 if amppow == 0:
-                    specyunit = "$\Phi_{0}^{2}/\\mathrm{Hz}$"
+                    specyunit = r"$\Phi_{0}^{2}/\\mathrm{Hz}$"
                 else:
-                    specyunit = "$10^{%d}\ \\Phi_{0}^{2}/\\mathrm{Hz}$" % (amppow)
+                    specyunit = r"$10^{%d}\ \\Phi_{0}^{2}/\\mathrm{Hz}$" % (amppow)
             elif spectype.upper() == "FluxASD".upper():
                 ampfactor = Mf / Rf
                 if amppow is None:
@@ -5834,9 +5834,9 @@ class DualChanSig:
 
                 self.spectrum = 10 ** (amppow) * ampfactor * np.sqrt(self.PSD)
                 if amppow == 0:
-                    specyunit = "$\\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
+                    specyunit = r"$\\Phi_{0}/\sqrt{\\mathrm{Hz}}$"
                 else:
-                    specyunit = "$10^{%d}\ \\Phi_{0}/\sqrt{\\mathrm{Hz}}$" % (amppow)
+                    specyunit = r"$10^{%d}\ \\Phi_{0}/\sqrt{\\mathrm{Hz}}$" % (amppow)
             else:
                 raise ValueError("spectype wrong 315")
         # elif ampunit in ['a.u.', 'au']:
@@ -5877,13 +5877,13 @@ class DualChanSig:
                 specxaxis[stdstart:stdend],
                 self.spectrum[stdstart:stdend],
                 label=f"Standard deviation = {(ampfactor) * self.PSDstd:.3e} "
-                + "$\\Phi_{0}^{2}/\\mathrm{Hz}$",
+                + r"$\\Phi_{0}^{2}/\\mathrm{Hz}$",
                 c="tab:green",
             )
             print("self.fitreport ", self.fitreport)
             print(
                 f"Standard deviation = {(ampfactor) * self.PSDstd:.3e} "
-                + "$\\Phi_{0}^{2}/\\mathrm{Hz}$"
+                + r"$\\Phi_{0}^{2}/\\mathrm{Hz}$"
             )
 
         if showfit and self.fitflag and not inset_zoom:
@@ -5908,7 +5908,7 @@ class DualChanSig:
 
         if specxunit.upper() == "HZ_RELATIVE":
             spec_ax.set_xlabel(specxlabel)
-            spec_ax.set_ylabel(spectype + "$\cdot$" + str(Yfactor) + rf" [{specyunit}]")
+            spec_ax.set_ylabel(spectype + r"$\cdot$" + str(Yfactor) + rf" [{specyunit}]")
         else:
             spec_ax.set_xlabel(specxlabel + " / " + specxunit)
             spec_ax.set_ylabel(spectype + " / " + specyunit)

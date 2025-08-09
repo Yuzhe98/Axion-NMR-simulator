@@ -686,7 +686,7 @@ class MagField:
             # check(np.mean(ax_lineshape))
 
             # inverse FFT method
-            ax_FFT = Bamp * ax_lineshape * rvs_phase * timeLen
+            ax_FFT = Bamp * ax_lineshape * rvs_phase * np.sqrt(timeLen)
             # area_simps = np.trapz(ax_lineshape**2, frequencies)
 
             # check(np.trapz(np.abs(ax_lineshape* rvs_phase)**2, frequencies))
