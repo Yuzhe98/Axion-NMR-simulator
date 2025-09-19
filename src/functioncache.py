@@ -2912,9 +2912,9 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
     c = 299792458.0  # Speed of light (in m/s)
     v_0, v_lab = np.abs(v_0), np.abs(v_lab)
     
-    shift = 0#max(1 - np.amin(nu), 1 + np.abs(nu_a))
-    nu_a += shift
-    nu += shift
+    # shift = 0#max(1 - np.amin(nu), 1 + np.abs(nu_a))
+    # nu_a += shift
+    # nu += shift
 
     full_lineshape = np.zeros(len(nu))
 
@@ -2987,7 +2987,7 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
     
     full_lineshape[nu_a_index:-1] += ax_sq_lineshape
     # nu_a -= shift
-    nu -= shift
+    # nu -= shift
     return full_lineshape
 
 # def get_ALP_wind(
@@ -3248,20 +3248,6 @@ def read_double_precision_floats(file_path):
     return doubles
 
 
-
-
-def find_consistent_candidates(fCNDs, margin):
-    def exists_in_all_lists(value, margin, lists):
-        return all(any(abs(value - x) < margin for x in lst) for lst in fCNDs)
-
-    common_values = []
-    for value in fCNDs[0]:
-        if exists_in_all_lists(value, margin, fCNDs[1:]):
-            common_values.append(value)
-
-    return common_values
-
-
 def find_consistent_values(fCNDs, margin):
     consistent_set = []
 
@@ -3345,86 +3331,6 @@ def ReturnNMRdata(basepath, scanname, index):
 
     return FLarmor, FWHM_n, area, FLarmor_err, FWHM_n_err, area_err
 
-
-def ReturnAvgT2star(allALPparams):
-    NMRwidths = [ALPparam[6] for ALPparam in allALPparams]
-    T2stars = 1 / (np.pi * np.array(NMRwidths))
-    T2star_errs = (1 / (np.pi * np.array(NMRwidths) ** 2)) * np.array(
-        [ALPparam[10][3] for ALPparam in allALPparams]
-    )
-
-    weights = 1 / T2star_errs**2
-    T2star_avg = np.average(T2stars, weights=weights)
-    # sigma_T_avg = np.sqrt(1 / np.sum(weights))
-    sigma_T_avg = np.average(T2star_errs)
-    check(T2star_avg)
-    check(sigma_T_avg)
-    return T2star_avg, sigma_T_avg
-
-
-# get T_2 time from CPMG measurement
-def ReturnT2time(basepath, scanname):
-    if "20221223" in scanname:
-        # logfile = rf"{basepath}/{scanname}/CPMG analysis/fitResults.txt"
-        # logfile = rf"{basepath}/{scanname}/CPMG analysis/T2_fixed_exp.txt"
-        # logfile = rf"{basepath}/{scanname}/CPMG analysis/T2_fixed_averaged.txt"
-        logfile = rf"{basepath}/{scanname}/CPMG analysis/T2_final.txt"
-    elif "20221214" in scanname:
-        logfile = rf"{basepath}/{scanname}/CPMG data/T2_fixed_exp.txt"
-
-    Log = np.genfromtxt(
-        logfile,
-        unpack=True,
-        delimiter=" ",
-        skip_header=0,
-        filling_values=0,
-        invalid_raise=False,
-    )
-    T2 = Log.flatten()[0]
-    T2_err = 5.473518921918743563e-02
-
-    return T2, T2_err
-
-
-# def ReturnMeasureTime(filelist, index): # does not always work
-#     # print("I will check the file "+allDMfiles[index]+" for the measurement time")
-#     Keadevice = Kea(name='blank')
-#     SQDsensor = SQUID(name=SQUIDname,  # 'Channel 1, S0217' 'Channel 3, S0132'
-#                     Mf = SQUID_Mf,
-#                     Rf = SQUID_Rf,
-#                     attenuation = attenuation,)
-#     Expinfo = Experiment(
-#             name = 'LIA NoPulse Recording',
-#             exptype = 'Not specified',
-#             dateandtime = GiveDateandTime(),)
-#     liastream = LIASignal(
-#                     name='LIA data',
-#                     device='LIA',
-#                     device_id='dev4434',
-#                     file=filelist[index],
-#                     verbose=False)
-#     liastream.LoadStream(
-#         # Keadevice=Keadevice,
-#         # SQDsensor=SQDsensor,
-#         # Expinfo=Expinfo,
-#         verbose=False)
-
-#     dateandtime = str(Expinfo.dateandtime.decode('utf-8'))
-
-#     year = int(dateandtime[:4])
-#     month = int(dateandtime[4:6])
-#     day = int(dateandtime[6:8])
-#     hour = dateandtime[9:11]
-#     minute = dateandtime[11:13]
-#     second = dateandtime[13:]
-
-#     date_time_int = math.floor(float(f"{hour}{minute}{second}"))
-#     date_time_str = f"{hour}:{minute}:{second}"
-
-#     return year, month, day, date_time_str, date_time_int
-
-
-# time stamp was not saved correctly into the HD5 files in the past. we just take the created time of the file
 
 
 def GetDateTimeSimple(year, month, day, time_hms, return_as_int=False):
