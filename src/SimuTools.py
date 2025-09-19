@@ -11,7 +11,6 @@ from mpl_toolkits.mplot3d import Axes3D  # for type hinting
 import numba as nb
 from math import sin, cos, sqrt
 from scipy.stats import maxwell, rayleigh, uniform, norm, chi2, gamma, expon
-# from scipy.integrate import simps
 
 import h5py
 
@@ -442,6 +441,8 @@ class MagField:
         self,
         method: str,  # 'inverse-FFT' 'time-interfer'
         timeStamp: np.ndarray,
+        simuRate: float,
+        duration: float,
         Bamp: float,  # amplitude of the pseudo-magnetic field in [T]
         nu_a: float,  # frequency in the rotating frame
         use_stoch: bool,
@@ -648,6 +649,13 @@ class MagField:
                 case="grad_perp",
                 alpha=0.0,
             )
+
+            # # check the normalization of the axion field PSD lineshape
+            # # np.sum(lineshape * freq_resol) should be 1
+            # freq_resol = np.abs(frequencies[0] - frequencies[1])
+            # check(np.sum(lineshape * freq_resol))
+            # del freq_resol
+
             rng = (
                 np.random.default_rng(seed=rand_seed) if rand_seed is not None else None
             )
@@ -686,24 +694,27 @@ class MagField:
             # check(np.mean(ax_lineshape))
 
             # inverse FFT method
-            ax_FFT = Bamp * ax_lineshape * rvs_phase * np.sqrt(timeLen)
+            ax_FFT = ax_lineshape * rvs_phase * Bamp * simuRate * np.sqrt(duration)
             # area_simps = np.trapz(ax_lineshape**2, frequencies)
 
             # check(np.trapz(np.abs(ax_lineshape* rvs_phase)**2, frequencies))
 
-            length = len(ax_FFT)
-            ax_FFT_pos_neg = np.array(
-                [ax_FFT[length // 2 :], ax_FFT[: length // 2]]
-            ).flatten()
-            del length
+            # the following block is equivalent to ax_FFT_pos_neg = np.fft.fftshift(ax_FFT)
+            # length = len(ax_FFT)
+            # ax_FFT_pos_neg = np.array(
+            #     [ax_FFT[length // 2 :], ax_FFT[: length // 2]]
+            # ).flatten()
+            # del length
 
-            Ba_t = np.fft.ifft(ax_FFT_pos_neg)
+            ax_FFT_0_pos_neg = np.fft.fftshift(ax_FFT)
+
+            Ba_t = np.fft.ifft(ax_FFT_0_pos_neg)
             Bx_amp, By_amp = np.real(Ba_t), np.imag(Ba_t)
             # check(np.mean(np.abs(Bx_amp)))
             # check(np.mean(np.abs(By_amp)))
             N = len(ax_FFT)
             freq = np.fft.fftfreq(N, timeStep)
-            dBadt_FFT = 1j * 2 * np.pi * freq * ax_FFT_pos_neg
+            dBadt_FFT = 1j * 2 * np.pi * freq * ax_FFT_0_pos_neg
             dBadt = np.fft.ifft(dBadt_FFT)
             dBxdt_amp, dBydt_amp = np.real(dBadt), np.imag(dBadt)
 

@@ -65,3 +65,50 @@ $\theta^2 \approx^? (\gamma B_a )^2 \tau_a T_2\, \lambda(\nu)$ when $\tau_a\ll T
 
 Let us verify these. 
 
+### 2025-09-19
+
+#### Brms magnitude test
+
+in [src\tests\20250919-Bamp-Brms-fft-ifft-magnitude-test\check_B_rms.py] we test the relationship between Bamp (input axion Ba field amplitude) and the output Brms (rms of the simulated axion B field). 
+
+In principle Brms is equal to Bamp. However, due to numpy.fft and numpy.ifft, the amplitude of simulated Ba field should be Bamp $\times$ some N, where N is simulation rate or array length. 
+
+Test 0:
+------------------------
+(input) Bamp = 1e-10
+
+(output) np.mean(B_rms_from_simu_arr) : float64(3.0370544560166723e-12) 
+
+np.std(B_rms_from_simu_arr) : float64(3.161938491415789e-13)
+
+simuRate * duration = 500 * 20 = 10000
+
+--------------------
+np.mean(B_rms_from_simu_arr) : float64(2.7800346877931807e-12)
+
+np.std(B_rms_from_simu_arr) : float64(8.35364629679566e-13)
+
+simuRate * duration = 500 * 2 = 1000
+
+---------------------------------------
+np.mean(B_rms_from_simu_arr) : float64(2.733154499609955e-12)
+
+np.std(B_rms_from_simu_arr) : float64(1.2322121825485608e-12)
+
+simuRate * duration = 500 * 2 = 1000
+
+---------------------
+
+np.mean(B_rms_from_simu_arr) : float64(1.0460985972196068e-11)
+
+np.std(B_rms_from_simu_arr) : float64(3.5039550658350867e-12)
+
+simuRate * duration = 50 * 2 = 100
+
+--------------
+
+line: ax_FFT = Bamp * ax_lineshape * rvs_phase * **simuRate * np.sqrt(duration)**
+
+fixed the problem. 
+
+Note that Brms of Bx or By is = Bamp / np.sqrt(2)

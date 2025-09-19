@@ -6,9 +6,6 @@ os.chdir("src")  # go to parent folder
 # print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
 
-# import pandas as pd
-# import pickle
-
 import numpy as np
 import time
 from SimuTools import Sample, MagField, Simulation, gate
@@ -19,9 +16,9 @@ from functioncache import check, GiveDateandTime
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-num_runs = 20
-simuRate = 500  #
-duration = 20
+num_runs = 100
+simuRate = 100  #
+duration = 500
 timeLen = int(simuRate * duration)
 
 results = np.empty(
@@ -38,14 +35,6 @@ use_stoch = True
 
 savedir = ""
 timestr = GiveDateandTime()
-# # Create DataFrame with time and data columns
-# df = pd.DataFrame({"name": ["ALP field simulation"]})
-
-# # Store metadata in DataFrame attributes (won't save in CSV, but can save in pickle)
-# df.attrs["timeStamp"] = simu.timeStamp
-# df.attrs["m_transverse"] = [results]
-# df.attrs["simuRate"] = simuRate
-# df.attrs["duration"] = duration
 
 ExampleSample10MHzT = Sample(
     name="TestSample",  # name of the atom/molecule
@@ -90,6 +79,8 @@ for i in range(num_runs):
     simu.excField.setALP_Field(
         method="inverse-FFT",
         timeStamp=simu.timeStamp,
+        simuRate=simuRate,
+        duration=duration,
         Bamp=Bamp,  # RMS amplitude of the pseudo-magnetic field in [T]
         nu_a=nu_a,  # frequency in the rotating frame
         # direction: np.ndarray,  #  = np.array([1, 0, 0])
@@ -102,7 +93,7 @@ for i in range(num_runs):
     # B_rms_from_simu = (
     #     np.mean(simu.excField.B_vec[:, 0] ** 2 + simu.excField.B_vec[:, 1] ** 2) ** 0.5
     # )
-    B_rms_from_simu = np.mean(np.abs(simu.excField.B_vec[:, 0])**2) ** 0.5
+    B_rms_from_simu = np.mean(np.abs(simu.excField.B_vec[:, 1])**2) ** 0.5
     # check(B_rms_from_simu)
     B_rms_from_simu_arr.append(B_rms_from_simu)
 
