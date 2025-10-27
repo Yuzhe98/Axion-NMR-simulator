@@ -112,3 +112,18 @@ line: ax_FFT = Bamp * ax_lineshape * rvs_phase * **simuRate * np.sqrt(duration)*
 fixed the problem. 
 
 Note that Brms of Bx or By is = Bamp / np.sqrt(2)
+
+### 2025-10-21
+
+#### Plan
+
+I am going to creatre a few classes for better clarifying the simulation conditions, including:
+
+1. SQUID
+2. Pickup
+3. Sample
+4. AxionWind
+5. MagField
+6. Simulation
+7. Experiment: LF or HF -> give fluxpower, exclusions, etc.
+8. 
