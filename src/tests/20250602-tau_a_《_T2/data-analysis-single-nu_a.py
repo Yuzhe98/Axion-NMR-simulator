@@ -1,27 +1,21 @@
 import os
 import sys
 
-os.chdir("src")  # 
+os.chdir("src")  #
 print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
 os.chdir("..")  # go to parent folder
 
-import pandas as pd
 import numpy as np
-import time
-from SimuTools import Sample, MagField, Simulation, gate
-from DataAnalysis import DualChanSig
-from functioncache import check, GiveDateandTime
+from functioncache import check
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 
-import numpy as np
-
 # Load the .npy file
 savedir = (
-    rf"C:\Users\zhenf\D\Yu0702\Axion-NMR-simulator\Tests\20250602-tau_a_《_T2\data_0/"
+    r"C:\Users\zhenf\D\Yu0702\Axion-NMR-simulator\Tests\20250602-tau_a_《_T2\data_0/"
 )
 nu_a_offsets = np.arange(-10, 10, 0.5)
 fname = "theta_all_runs_20250602_134924_15"

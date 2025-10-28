@@ -10,11 +10,12 @@ from mpl_toolkits.mplot3d import Axes3D  # for type hinting
 
 import numba as nb
 from math import sin, cos, sqrt
-from scipy.stats import maxwell, rayleigh, uniform, norm, chi2, gamma, expon
+from scipy.stats import maxwell, uniform, expon
 
 import h5py
 
 from DataAnalysis import DualChanSig
+from Sample import *
 
 
 def gate(x: float | np.ndarray, start: float, stop: float) -> float:
@@ -30,257 +31,6 @@ def gate(x: float | np.ndarray, start: float, stop: float) -> float:
         1 if start <= x <= stop, else 0.
     """
     return np.where((start <= x) & (x < stop), 1.0, 0.0)
-
-
-class Sample:
-    def __init__(
-        self,
-        name=None,  # name of the atom/molecule
-        gyroratio=None,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
-        numofnuclei=None,  #
-        tempunit="K",  # temperature scale
-        boilpt=None,  # [K]
-        meltpt=None,  # [K]
-        density_liquid=None,  # [g/cm^3]
-        density_gas=None,  # [g/cm^3] at STP
-        density_solid=None,  # [g/cm^3]
-        molarmass=None,  # [g/mol]
-        spindenisty_liquid=None,  # [mol/cm^3]
-        spindenisty_gas=None,  # [g/cm^3] at STP
-        spindenisty_solid=None,  # [mol/cm^3]
-        shareofpeaks=None,  # array or list.
-        T2=None,  # [s]
-        T1=None,  # [s]
-        pol=np.NaN,
-        vol=np.NaN,
-        mdm=np.NaN,
-        verbose=False,
-    ):
-        """
-        create a sample with certain properities.
-
-        numofnuclei
-        boilpt
-        meltpt
-        freezpt
-        density_liquid
-        density_gas
-        density_solid
-        molarmass
-        spindenisty_liquid
-        spindenisty_gas
-        spindenisty_solid
-        shareofpeaks
-
-
-
-        Wikipedia: Standard temperature and pressure
-        https://en.wikipedia.org/wiki/Standard_temperature_and_pressure
-        In chemistry, IUPAC changed its definition of standard temperature and pressure in 1982:[1][2]
-
-        Until 1982, STP was defined as a temperature of 273.15 K (0 °C, 32 °F) and an absolute pressure
-        of exactly 1 atm (101.325 kPa).
-        Since 1982, STP has been defined as a temperature of 273.15 K (0 °C, 32 °F) and an absolute
-        pressure of exactly 105 Pa (100 kPa, 1 bar).
-        STP should not be confused with the standard state commonly used in thermodynamic evaluations
-        of the Gibbs energy of a reaction.
-
-        NIST uses a temperature of 20 °C (293.15 K, 68 °F) and an absolute pressure of 1 atm
-        (14.696 psi, 101.325 kPa).[3] This standard is also called normal temperature and pressure
-        (abbreviated as NTP). However, a common temperature and pressure in use by NIST for
-        thermodynamic experiments is 298.15 K (25°C, 77°F) and 1 bar (14.5038 psi, 100 kPa).[4][5] NIST
-        also uses "15 °C (60 °F)" for the temperature compensation of refined petroleum products,
-        despite noting that these two values are not exactly consistent with each other.[6]
-        """
-        self.name = name
-        self.gyroratio = gyroratio
-        zerocelsius = 273.15  # [K]
-        self.numofnuclei = numofnuclei
-        if tempunit in ["K", "k", "Kelvin", "kelvin"]:
-            self.boilpt = boilpt
-            self.meltpt = meltpt
-        elif tempunit in ["C", "c", "Celsius", "celsius"]:
-            print("WARNING: Converting to Kelvin temperature scale...")
-            if boilpt is not None:
-                self.boilpt = boilpt + zerocelsius
-            else:
-                self.boilpt = boilpt
-            if meltpt is not None:
-                self.meltpt = meltpt + zerocelsius
-            else:
-                self.meltpt = meltpt
-
-        self.density_liquid = density_liquid
-        self.density_gas = density_gas
-        self.density_solid = density_solid
-        self.molarmass = molarmass
-        self.spindenisty_liquid = spindenisty_liquid
-        self.spindenisty_gas = spindenisty_gas
-        self.spindenisty_solid = spindenisty_solid
-        # if shareofpeaks is None:
-        #     self.shareofpeaks = shareofpeaks
-        # elif type(shareofpeaks) is np.ndarray:
-        #     if type(shareofpeaks[0]) is np.float32 or type(shareofpeaks[0]) is np.float64:
-        #         self.shareofpeaks = shareofpeaks
-        #     elif type(shareofpeaks[0]) is np.int32 or type(shareofpeaks[0]) is np.int64:
-        #         self.shareofpeaks = shareofpeaks.astype(np.float64)
-        #     else:
-        #         raise TypeError('shareofpeaks[0] is not float nor int. ')
-        # elif shareofpeaks is list:
-        #     if type(shareofpeaks[0]) is float or type(shareofpeaks[0]) is int:
-        #         self.shareofpeaks = np.array(shareofpeaks,dtype=np.float64)
-        #     else:
-        #         raise TypeError('shareofpeaks[0] is not float nor int. ')
-
-        if self.molarmass is not None:
-            if self.spindenisty_liquid is None and self.density_liquid is not None:
-                self.spindenisty_liquid = (
-                    self.numofnuclei * self.density_liquid / self.molarmass
-                )
-            elif self.spindenisty_liquid is not None and self.density_liquid is None:
-                self.density_liquid = (
-                    self.spindenisty_liquid * self.molarmass / self.numofnuclei
-                )
-
-            if self.spindenisty_gas is None and self.density_gas is not None:
-                self.spindenisty_gas = (
-                    self.numofnuclei * self.density_gas / self.molarmass
-                )
-            elif self.spindenisty_gas is not None and self.density_gas is None:
-                self.density_gas = (
-                    self.spindenisty_gas * self.molarmass / self.numofnuclei
-                )
-
-            if self.spindenisty_solid is None and self.density_solid is not None:
-                self.spindenisty_solid = (
-                    self.numofnuclei * self.density_solid / self.molarmass
-                )
-            elif self.spindenisty_solid is not None and self.density_solid is None:
-                self.density_solid = (
-                    self.spindenisty_solid * self.molarmass / self.numofnuclei
-                )
-
-        self.T2 = T2  # [s]
-        self.T1 = T1  # [s]
-        self.pol = pol
-        self.vol = vol
-        self.mdm = mdm
-
-
-liquid_Xe129 = Sample(
-    name="Liquid Xe-129",  # name of the atom/molecule
-    gyroratio=2
-    * np.pi
-    * (-11.777)
-    * 10**6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
-    numofnuclei=1,  #
-    tempunit="K",  # temperature scale
-    boilpt=165.051,  # [K]
-    meltpt=161.40,  # [K]
-    density_liquid=2.942,  # [g/cm^3] at boiling point
-    density_gas=5.894 * 10**3,  # [g/cm^3] at STP
-    density_solid=None,  # [g/cm^3]
-    molarmass=131.2930,  # [g/mol]
-    spindenisty_liquid=None,  # [mol/cm^3]
-    spindenisty_gas=None,  # [g/cm^3] at STP
-    spindenisty_solid=None,  # [mol/cm^3]
-    shareofpeaks=[1.0],  # array or list.
-    T2=None,  # [s]
-    T1=1000,  # [s]
-    pol=0.5,
-    verbose=False,
-)
-# TestSample10MHzT = Sample(
-#     name="TestSample",  # name of the atom/molecule
-#     gyroratio=2
-#     * np.pi
-#     * (10)
-#     * 10**6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
-#     numofnuclei=1,  #
-#     tempunit="K",  # temperature scale
-#     boilpt=165.051,  # [K]
-#     meltpt=161.40,  # [K]
-#     density_liquid=2.942,  # [g/cm^3] at boiling point
-#     density_gas=5.894 * 10**3,  # [g/cm^3] at STP
-#     density_solid=None,  # [g/cm^3]
-#     molarmass=131.2930,  # [g/mol]
-#     spindenisty_liquid=None,  # [mol/cm^3]
-#     spindenisty_gas=None,  # [g/cm^3] at STP
-#     spindenisty_solid=None,  # [mol/cm^3]
-#     shareofpeaks=[1.0],  # array or list.
-#     T2=None,  # [s]
-#     T1=1000,  # [s]
-#     pol=1,
-#     verbose=False,
-# )
-Methanol = Sample(
-    name="12C Methanol",  # name of the atom/molecule
-    gyroratio=2
-    * np.pi
-    * 42.577478518
-    * 10**6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
-    numofnuclei=4,  #
-    tempunit="K",  # temperature scale
-    boilpt=337.8,  # [K]
-    meltpt=175.6,  # [K]
-    density_liquid=0.792,  # [g/cm^3] at boiling point
-    density_gas=None,  # [g/cm^3] at STP
-    density_solid=None,  # [g/cm^3]
-    molarmass=32.04,  # [g/mol]
-    spindenisty_liquid=None,  # [mol/cm^3]
-    spindenisty_gas=None,  # [g/cm^3] at STP
-    spindenisty_solid=None,  # [mol/cm^3]
-    shareofpeaks=[3.0 / 4, 1.0 / 4],  # array or list.
-    pol=1.76876e-7,
-    verbose=False,
-)
-Ethanol = Sample(
-    name="Ethanol",  # name of the atom/molecule
-    gyroratio=2
-    * np.pi
-    * 42.577478518
-    * 10**6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
-    numofnuclei=6,  #
-    tempunit="K",  # temperature scale
-    boilpt=351.38,  # [K]
-    meltpt=159.01,  # [K]
-    density_liquid=0.78945,  # [g/cm^3] at boiling point
-    density_gas=None,  # [g/cm^3] at STP
-    density_solid=None,  # [g/cm^3]
-    molarmass=46.069,  # [g/mol]
-    spindenisty_liquid=None,  # [mol/cm^3]
-    spindenisty_gas=None,  # [g/cm^3] at STP
-    spindenisty_solid=None,  # [mol/cm^3]
-    shareofpeaks=[3 / 6.0, 2.0 / 6, 1.0 / 6],  # array or list.
-    T2=None,  # [s]
-    T1=None,  # [s]
-    pol=1.76876e-7,
-    verbose=False,
-)
-# emppty example
-# molecule = Sample(
-#         name='',  # name of the atom/molecule
-#         gyroratio=2 * np.pi * 42.577478518*10**6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
-#         numofnuclei=None,  #
-#         tempunit='K',  # temperature scale
-#         boilpt=None,  # [K]
-#         meltpt=None,  # [K]
-#         density_liquid=None,  # [g/cm^3] at boiling point
-#         density_gas=None,  # [g/cm^3] at STP
-#         density_solid=None,  # [g/cm^3]
-#         molarmass=None,  # [g/mol]
-#         spindenisty_liquid=None,  # [mol/cm^3]
-#         spindenisty_gas=None,  # [g/cm^3] at STP
-#         spindenisty_solid=None,  # [mol/cm^3]
-#         shareofpeaks=None,  # array or list.
-#         T2_liquid=None,  # [s]
-#         T2_gas=None,  # [s] at STP
-#         T2_solid=None,  # [s]
-#         T1_liquid=1000,  # [s]
-#         T1_gas=3*24*3600,  # [s] at STP
-#         T1_solid=None,  # [s]
-#         verbose=False
-#         )
 
 
 class MagField:
@@ -823,7 +573,7 @@ class Simulation:
         """
         self.name = name
         self.sample = sample
-        self.gyroratio = sample.gyroratio
+        self.gyroratio = sample.gamma
 
         self.station = station
 
@@ -849,7 +599,7 @@ class Simulation:
         # self.simutimerate = 1.0 / self.simutimestep
         self.demodfreq = demodfreq
         self.nu_rot = (
-            abs(self.sample.gyroratio * self.B0z / (2 * np.pi)) - self.demodfreq
+            abs(self.sample.gamma * self.B0z / (2 * np.pi)) - self.demodfreq
         )  # frequency difference between the excitation field and the Larmor frequency
         # nu_rot is the Larmor frequency of the magnetization in the rotating frame
 
@@ -875,7 +625,7 @@ class Simulation:
         # self.va = 300 * 1e3
 
         if verbose:
-            print(f"Larmor frequency: {self.B0z*self.sample.gyroratio/(2*np.pi):e} Hz")
+            print(f"Larmor frequency: {self.B0z*self.sample.gamma/(2*np.pi):e} Hz")
             # print(f"ALP compton frequency: {self.excField.nu:e} Hz")
             print(f"simulation rate: {self.simuRate:e} Hz")
 
@@ -1087,7 +837,7 @@ class Simulation:
             self.excField.BALP
         )  # why? * (1 + self.ALPwind.Gamma * np.random.standard_cauchy(size=2 * self.numofALPparticle))
         ALP_nu = self.excField.nu * (1 + (self.ALP_B / self.excField.BALP * 1e-3) ** 2)
-        ALP_nu_rot = abs(ALP_nu) - abs(self.sample.gyroratio * self.B0z / (2 * np.pi))
+        ALP_nu_rot = abs(ALP_nu) - abs(self.sample.gamma * self.B0z / (2 * np.pi))
         self.va = 220 * 1e3  # 220 km/s
         self.speedtova = maxwell.rvs(size=2 * self.numofALPparticle)
 
@@ -1135,9 +885,7 @@ class Simulation:
             # plt.title('Frequency distribution')
             # plt.show()
 
-        ALP_nu_rot_arr = self.nu_a_arr - abs(
-            self.sample.gyroratio * self.B0z / (2 * np.pi)
-        )
+        ALP_nu_rot_arr = self.nu_a_arr - abs(self.sample.gamma * self.B0z / (2 * np.pi))
         # plt.hist(ALP_B/self.ALPwind.BALP, bins=1000)
         # plt.show()
 
@@ -1260,15 +1008,15 @@ class Simulation:
         # if verbose:
         #     check(newphase_generation/looptime)
         self.timeStamp = np.arange(len(self.Bexc_t_vec)) * self.timeStep
-        check(self.excField.BALP * abs(self.sample.gyroratio))
+        check(self.excField.BALP * abs(self.sample.gamma))
         # check(self.BALP_array[:, 0])
         self.BALPsq_arr = (
             self.Bexc_t_vec[:, 0] ** 2
             + self.Bexc_t_vec[:, 1] ** 2
             + self.Bexc_t_vec[:, 2] ** 2
         )
-        check(np.mean(np.sqrt(self.BALPsq_arr)) * abs(self.sample.gyroratio))
-        check(np.sqrt(np.mean(self.BALPsq_arr)) * abs(self.sample.gyroratio))
+        check(np.mean(np.sqrt(self.BALPsq_arr)) * abs(self.sample.gamma))
+        check(np.sqrt(np.mean(self.BALPsq_arr)) * abs(self.sample.gamma))
         if verbose:
             fig = plt.figure(figsize=(8 * 0.6, 6 * 0.6), dpi=150)  #
             gs = gridspec.GridSpec(nrows=1, ncols=1)  #
@@ -1576,7 +1324,7 @@ class Simulation:
         verbose: bool = False,
     ):
         self.excType = "pulse"
-        B1 = 2 * tipAngle / (self.sample.gyroratio * pulseDur)
+        B1 = 2 * tipAngle / (self.sample.gamma * pulseDur)
         duty_func = partial(gate, start=0, stop=pulseDur)
         if nu_rot is None:
             nu_rot = self.excField.nu - self.demodfreq
@@ -1672,8 +1420,8 @@ class Simulation:
         self.trjry[0] = vecM0
         #
         timeStep = self.timeStep
-        gyroratio = self.sample.gyroratio
-        B0z_rot_amp = self.B0z - self.demodfreq / (self.sample.gyroratio / (2 * np.pi))
+        gyroratio = self.sample.gamma
+        B0z_rot_amp = self.B0z - self.demodfreq / (self.sample.gamma / (2 * np.pi))
         B0z_rot = B0z_rot_amp * np.ones(len(self.excField.B_vec))
         B0_rot = np.outer(B0z_rot, np.array([0, 0, 1]))
         if usenumba:
@@ -1700,7 +1448,7 @@ class Simulation:
                 My=My,
                 Mz=Mz,
                 nu_rot=self.nu_rot,
-                gyroratio=self.sample.gyroratio,
+                gyroratio=self.sample.gamma,
                 timeStep=self.timeStep,
                 M0inf=M0inf,
                 T2=self.T2,
@@ -2076,10 +1824,10 @@ class Simulation:
         else:
             suffix = ""
         h5f = h5py.File(h5fpathandname + suffix, "w")
-        h5demod0 = h5f.create_group(f"NMRKineticSimu/demods/0")
+        h5demod0 = h5f.create_group("NMRKineticSimu/demods/0")
         h5demod0.create_dataset(
             "demodfreq",
-            data=np.array([abs(self.sample.gyroratio * self.B0z / (2 * np.pi))]),
+            data=np.array([abs(self.sample.gamma * self.B0z / (2 * np.pi))]),
         )
         h5demod0.create_dataset(
             "samprate", data=np.array([self.simuRate / (1.0 * saveintv)])
@@ -2091,7 +1839,7 @@ class Simulation:
         h5demod0.create_dataset("samplex", data=self.trjry[0:-1:saveintv, 0])
         h5demod0.create_dataset("sampley", data=self.trjry[0:-1:saveintv, 1])
 
-        h5demod1 = h5f.create_group(f"NMRKineticSimu/demods/1")
+        h5demod1 = h5f.create_group("NMRKineticSimu/demods/1")
         h5demod1.create_dataset("samplez", data=self.trjry[0:-1:saveintv, 2])
 
         h5axion = h5f.create_group("ALPwind")
@@ -2111,7 +1859,7 @@ class Simulation:
 
         h5sample = h5f.create_group("Sample")
         h5sample.create_dataset("name", data=[self.sample.name])
-        h5sample.create_dataset("gyroratio", data=[self.sample.gyroratio])
+        h5sample.create_dataset("gyroratio", data=[self.sample.gamma])
         h5sample.create_dataset("T1", data=np.array([self.T1]))
         h5sample.create_dataset("T2", data=np.array([self.T2]))
         h5sample.create_dataset("pol", data=[self.sample.pol])
@@ -2285,7 +2033,7 @@ class Simulation:
         check(self.trjryStream.popt[2])
         # print('fit linewidth = ', self.trjryStream.popt[1])
         ax00.set_xlabel("frequency" + specxunit)
-        ax00.set_ylabel(f"PSD")
+        ax00.set_ylabel("PSD")
         # ax00.set_xscale('log')
         # ax00.set_yscale('log')
         ax00.legend()

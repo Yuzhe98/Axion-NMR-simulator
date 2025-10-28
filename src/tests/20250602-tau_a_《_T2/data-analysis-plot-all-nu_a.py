@@ -1,27 +1,26 @@
 import os
 import sys
 
-os.chdir("src")  # 
-print(os.path.abspath(os.curdir))
-sys.path.insert(0, os.path.abspath(os.curdir))
-os.chdir("..")  # go to parent folder
-
 # import pandas as pd
 import numpy as np
+
 # import time
 # from SimuTools import Sample, MagField, Simulation, gate
 # from DataAnalysis import DualChanSig
-from functioncache import check
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from tqdm import tqdm
 
-import numpy as np
+
+os.chdir("src")  #
+print(os.path.abspath(os.curdir))
+sys.path.insert(0, os.path.abspath(os.curdir))
+os.chdir("..")  # go to parent folder
 
 # Load the .npy file
 savedir = (
-    rf"C:\Users\zhenf\D\Yu0702\Axion-NMR-simulator\Tests\20250602-tau_a_《_T2\data_0/"
+    r"C:\Users\zhenf\D\Yu0702\Axion-NMR-simulator\Tests\20250602-tau_a_《_T2\data_0/"
 )
 
 fname = "theta_all_runs_20250602_134924_summary"
@@ -43,7 +42,7 @@ num_runs = len(data["sin_theta_means"])
 sin_theta_amp = np.empty((num_runs), dtype=np.float64)
 len_of_1_run = len(data["sin_theta_means"][0])
 for i, nu_a_offset in enumerate(tqdm(nu_a_offsets)):
-    sin_theta_amp[i] = np.mean(data["sin_theta_means"][i, len_of_1_run //2:])
+    sin_theta_amp[i] = np.mean(data["sin_theta_means"][i, len_of_1_run // 2 :])
 
 fig = plt.figure(figsize=(6.0, 4.0), dpi=150)  # initialize a figure
 gs = gridspec.GridSpec(nrows=1, ncols=2)  # create grid for multiple figures
@@ -74,7 +73,11 @@ ax01 = fig.add_subplot(gs[0, 1])
 # ax00.plot(data["timeStamp"], data[""], label="tipping angle")
 
 for i, nu_a in enumerate(tqdm(nu_a_offsets)):
-    ax00.plot(data["timeStamp"], data['sin_theta_means'][i], label=f"$\\Delta\\nu_a=${nu_a} (Hz)")
+    ax00.plot(
+        data["timeStamp"],
+        data["sin_theta_means"][i],
+        label=f"$\\Delta\\nu_a=${nu_a} (Hz)",
+    )
 
 
 # ax00.fill_between(
@@ -117,7 +120,11 @@ ax00.set_ylabel("tipping angle (rad)")
 
 
 # Vertical lines and their labels
-vline_positions = [data["T2"] / 10, data["T2"], np.sqrt(data["T2"] * 1./(1.2 * np.pi))]
+vline_positions = [
+    data["T2"] / 10,
+    data["T2"],
+    np.sqrt(data["T2"] * 1.0 / (1.2 * np.pi)),
+]
 vline_labels = ["$T_2 / 10$", "$T_2$", "$(T_2\\tau_a)^{1/2}$"]
 # Draw vertical lines with labels
 for xpos, label in zip(vline_positions, vline_labels):

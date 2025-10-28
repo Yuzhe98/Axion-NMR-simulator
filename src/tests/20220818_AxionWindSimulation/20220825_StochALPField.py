@@ -1,5 +1,4 @@
 import os
-from random import sample
 import sys
 
 print(os.path.abspath(os.curdir))
@@ -8,7 +7,7 @@ print(os.path.abspath(os.curdir))
 
 print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
-from SimuTools import liquid_Xe129, Methanol, Mainz, TestSample10MHzT, TestStation
+from SimuTools import TestSample10MHzT, TestStation
 from SimuTools import *
 from DataAnalysis import *
 
@@ -102,12 +101,12 @@ for ALPnuorder in [6]:
             # 		verbose=False
             # )
             print(
-                f"***************************************************************************"
+                "***************************************************************************"
             )
             print(f"T2* = {magnetization.T2:e}")
             magnetization.StatTrajectory(verbose=True)
             print(
-                f"**************************************************************************"
+                "**************************************************************************"
             )
             Mt_list.append(np.sqrt(magnetization.avgMxsq + magnetization.avgMysq))
             processdata = False

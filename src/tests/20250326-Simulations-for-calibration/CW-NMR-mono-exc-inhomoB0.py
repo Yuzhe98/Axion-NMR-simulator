@@ -9,16 +9,14 @@ sys.path.insert(0, os.path.abspath(os.curdir))
 
 import numpy as np
 import time
-from SimuTools import Sample, MagField, Simulation, gate
-from DataAnalysis import DualChanSig
-from functioncache import check
+from SimuTools import Sample, MagField, Simulation
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 ExampleSample10MHzT = Sample(
     name="TestSample",  # name of the atom/molecule
-    gyroratio=2
+    gamma=2
     * np.pi
     * (10)
     * 10**6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
@@ -35,7 +33,7 @@ excField = MagField(name="excitation field")  # excitation field in the rotating
 excField.nu = 1e6 + 0  # [Hz]
 
 Larmor_freqs = 1e6 - np.arange(-10, 2, 2)
-B0z_list = Larmor_freqs / (ExampleSample10MHzT.gyroratio / (2 * np.pi))
+B0z_list = Larmor_freqs / (ExampleSample10MHzT.gamma / (2 * np.pi))
 specy_list = []
 for B0z in B0z_list:
     simu = Simulation(

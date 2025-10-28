@@ -1,8 +1,4 @@
-import numpy as np
-import time
-from functioncache import LF_2025, PhysicalQuantity, check
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+from functioncache import LF_2025, PhysicalQuantity
 from math import pi
 
 hf2025_SQD = LF_2025(
@@ -28,7 +24,9 @@ for freq_val in [150e6]:
     freq_list.append(freq)
     Tmeas_list.append(1e4 * pi * hf2025_SQD.Q_a / freq)
 
-hf2025_SQD.getXe129_Sensi_Phase2(freq_list=freq_list, Tmeas_list=Tmeas_list, verbose=True)
+hf2025_SQD.getXe129_Sensi_Phase2(
+    freq_list=freq_list, Tmeas_list=Tmeas_list, verbose=True
+)
 
 """
 Transver magnetization: 2.38e-07 A/m

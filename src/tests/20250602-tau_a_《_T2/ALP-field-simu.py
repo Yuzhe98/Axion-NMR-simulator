@@ -1,24 +1,15 @@
 import os
 import sys
 
-from torch import dtype
+import numpy as np
+from SimuTools import Sample, MagField, Simulation
+from functioncache import GiveDateandTime
+
 
 os.chdir("src")  # go to parent folder
 print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
 
-import pandas as pd
-import pickle
-
-import numpy as np
-import time
-from SimuTools import Sample, MagField, Simulation, gate
-from DataAnalysis import DualChanSig
-from functioncache import check, GiveDateandTime
-
-
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 
 num_runs = 1
 simuRate = 500  #
@@ -37,7 +28,7 @@ Bamp = 1e-10
 nu_a = -0.7
 use_stoch = True
 
-savedir = rf"C:\Users\zhenf\D\Mainz\CASPEr\20250520-tau_a_《_T2/"
+savedir = r"C:\Users\zhenf\D\Mainz\CASPEr\20250520-tau_a_《_T2/"
 timestr = GiveDateandTime()
 # # Create DataFrame with time and data columns
 # df = pd.DataFrame({"name": ["ALP field simulation"]})
@@ -50,7 +41,7 @@ timestr = GiveDateandTime()
 
 ExampleSample10MHzT = Sample(
     name="TestSample",  # name of the atom/molecule
-    gyroratio=2
+    gamma=2
     * np.pi
     * (10)
     * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
@@ -75,7 +66,7 @@ simu = Simulation(
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
     demodfreq=demodfreq,
-    B0z=(1e6) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
+    B0z=(1e6) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=simuRate,  #
     duration=duration,
     excField=ALP_Field_grad,

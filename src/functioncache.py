@@ -1,6 +1,7 @@
 import inspect  # for check()
 import re  # for check()
-import time, datetime
+import time
+import datetime
 import sys
 import math
 
@@ -12,13 +13,14 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.ticker as mticker
 from matplotlib.patches import FancyArrowPatch
+
 # from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d import proj3d
+
 # from astropy.time import Time
 from datetime import datetime
 from tqdm import tqdm
 import random
-from itertools import product
 
 from functools import partial
 
@@ -27,11 +29,12 @@ from scipy.stats import rayleigh, uniform, norm, chi2, gamma
 
 # import numba as nb
 # from numba import jit, vectorize
-from math import sin, cos, sqrt
+
 # import pyautogui
 
 # from DataAnalysis import LIASignal, SQUID
 import pandas as pd
+
 # from evidently.report import Report
 # from evidently.metric_preset import DataDriftPreset
 
@@ -1309,18 +1312,18 @@ def stdPSD(
 
 
 def stdLIAPSD(
-    data_x:np.ndarray=None,
-    data_y:np.ndarray=None,
-    samprate:float=None,
-    demodfreq:float=None,
-    attenuation:str=0,
-    windowfunction:str="rectangle",
-    decayfactor:float=-10.0,
+    data_x: np.ndarray = None,
+    data_y: np.ndarray = None,
+    samprate: float = None,
+    demodfreq: float = None,
+    attenuation: str = 0,
+    windowfunction: str = "rectangle",
+    decayfactor: float = -10.0,
     showwindow=False,
-    DTRCfilter:str="off",
-    DTRCfilter_TC:float=1e-6,
-    DTRCfilter_order:float=8,
-    verbose:bool=False,
+    DTRCfilter: str = "off",
+    DTRCfilter_TC: float = 1e-6,
+    DTRCfilter_order: float = 8,
+    verbose: bool = False,
 ):
     """
     Return the frequency bin centers and power spectral density
@@ -1429,7 +1432,7 @@ def stdLIAPSD(
         print(f"S2 = {S2:g}")
 
     # Compute frequency axis from time-series length and sampling rate
-    frequencies:np.ndarray = np.fft.fftfreq(
+    frequencies: np.ndarray = np.fft.fftfreq(
         len(data_x), d=1.0 / samprate
     )  # Set d to dwell time in s
 
@@ -1559,18 +1562,18 @@ def stdLIAPSD(
 
 
 def stdLIAFFT(
-    data_x:np.ndarray=None,
-    data_y:np.ndarray=None,
-    samprate:float=None,
-    demodfreq:float=None,
-    attenuation:str=None,
-    windowfunction:str="rectangle",
-    decayfactor:float=-10.0,
+    data_x: np.ndarray = None,
+    data_y: np.ndarray = None,
+    samprate: float = None,
+    demodfreq: float = None,
+    attenuation: str = None,
+    windowfunction: str = "rectangle",
+    decayfactor: float = -10.0,
     showwindow=False,
-    DTRCfilter:str="off",
-    DTRCfilter_TC:float=1e-6,
-    DTRCfilter_order:float=8,
-    verbose:bool=False,
+    DTRCfilter: str = "off",
+    DTRCfilter_TC: float = 1e-6,
+    DTRCfilter_order: float = 8,
+    verbose: bool = False,
 ):
     """
     Return the frequency bin centers and FFT results.
@@ -2014,7 +2017,7 @@ def statUni2Pi(num=None, showplt=False, verbose=False):
             r, density=False, histtype="stepfilled", alpha=0.9, range=(0, 2 * np.pi)
         )
         # ax.legend(loc='best', frameon=False)
-        ax.set_ylabel(f"Count")
+        ax.set_ylabel("Count")
         ax.set_title("Uniform distribution [0, 2*Pi]")
         plt.show()
     return r
@@ -2164,7 +2167,7 @@ def statRayleigh(sigma=None, num=None, showplt=False, verbose=False):
             r, density=False, histtype="stepfilled", alpha=0.9, range=(0, np.amax(r))
         )
         # ax.legend(loc='best', frameon=False)
-        ax.set_ylabel(f"Count")
+        ax.set_ylabel("Count")
         ax.set_title(f"Rayleigh distribution sigma={sigma}")
         plt.show()
     return r
@@ -2228,8 +2231,8 @@ def randomwalk2D(sigma=None, numofstep=None, num=None, showplt=False, verbose=Fa
             alpha=0.9,
         )
         ax.legend(loc="best", frameon=True, fontsize=8)
-        ax.set_ylabel(f"Count")
-        ax.set_xlabel(f"Amplitude")
+        ax.set_ylabel("Count")
+        ax.set_xlabel("Amplitude")
         # ax.set_title(f'Rayleigh distribution sigma={sigma}')
         ax.grid()
 
@@ -2246,7 +2249,7 @@ def randomwalk2D(sigma=None, numofstep=None, num=None, showplt=False, verbose=Fa
         )
         ax2.legend(loc="best", frameon=True)
         # ax2.set_ylabel(f'Count')
-        ax2.set_xlabel(f"Phase")
+        ax2.set_xlabel("Phase")
         ax2.grid()
 
         plt.show()
@@ -2267,7 +2270,7 @@ def statGaussian(mu=None, sigma=None, num=None, showplt=False, verbose=False):
         ax = fig.add_subplot(gs[0, 0])
         ax.hist(r, density=False, histtype="stepfilled", alpha=0.9)
         # ax.legend(loc='best', frameon=False)
-        ax.set_ylabel(f"Count")
+        ax.set_ylabel("Count")
         ax.set_title(f"Gaussian distribution sigma={sigma}")
         plt.show()
     return r
@@ -2319,7 +2322,7 @@ def orth2sph(vec):
     if x>0 and y>0:
         phi = np.arcsin(y/)
         return [r, theta, phi]
-    
+
     if x==0:
         phi = np.arcsin(y/(x**2+y**2)**0.5)
         return [r, theta, phi]
@@ -2911,7 +2914,7 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
     """
     c = 299792458.0  # Speed of light (in m/s)
     v_0, v_lab = np.abs(v_0), np.abs(v_lab)
-    
+
     # shift = 0#max(1 - np.amin(nu), 1 + np.abs(nu_a))
     # nu_a += shift
     # nu += shift
@@ -2926,7 +2929,6 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
         return full_lineshape
 
     freq = nu[nu_a_index:-1]
-    
 
     assert case in [
         "non-grad",
@@ -2934,13 +2936,7 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
         "grad_perp",
     ], "Case should be 'non-grad', 'grad_par', or 'grad_perp'!"
 
-    beta = (
-        2
-        * c
-        * v_lab
-        * np.sqrt(2 * (freq - nu_a) / nu_a)
-        / v_0**2
-    )  # Eq. (13)
+    beta = 2 * c * v_lab * np.sqrt(2 * (freq - nu_a) / nu_a) / v_0**2  # Eq. (13)
     # *np.sqrt(2 * (nu - nu_a) / nu_a)
     # for arr in [beta]:
     #     print('beta check')
@@ -2957,13 +2953,13 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
             * np.sinh(beta)
             / (np.sqrt(np.pi) * v_0 * v_lab * nu_a)
         )
-        
+
     elif case == "grad_par":  # Parallel gradient case, Eq. (19)
         factor = (
             np.cos(alpha) ** 2
             - (1 / np.tanh(beta) - 1.0 / beta) * (2 - 3 * np.sin(alpha) ** 2) / beta
         )
-        ax_sq_lineshape= (
+        ax_sq_lineshape = (
             (4 * c**2 / (v_0**2 + 2 * (v_lab * np.cos(alpha)) ** 2))
             * (freq / nu_a - 1)
             * factor
@@ -2984,11 +2980,12 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
         )
     else:  # adding this to try and get rid of an error message
         return np.zeros(nu.shape)
-    
+
     full_lineshape[nu_a_index:-1] += ax_sq_lineshape
     # nu_a -= shift
     # nu -= shift
     return full_lineshape
+
 
 # def get_ALP_wind(
 #     year=None,
@@ -3332,7 +3329,6 @@ def ReturnNMRdata(basepath, scanname, index):
     return FLarmor, FWHM_n, area, FLarmor_err, FWHM_n_err, area_err
 
 
-
 def GetDateTimeSimple(year, month, day, time_hms, return_as_int=False):
     datetime_obj = datetime.strptime(
         f"{year}-{month:02}-{day:02} {time_hms}", "%Y-%m-%d %H:%M:%S"
@@ -3494,7 +3490,7 @@ def ChisqMeanDistribution(N_mean: int = 240, Nsamples: int = 5000):
         marker="o",
         s=6,
         zorder=6,
-        label=f"histogram",
+        label="histogram",
     )
     plt.plot(hist_x, hist_y)
     plt.yscale("log")
@@ -3629,7 +3625,7 @@ def print_progress_bar(
     sys.stdout.flush()
     # write \n when the iteration finishes
     if (iteration) == total:
-        sys.stdout.write(f"\n")
+        sys.stdout.write("\n")
 
 
 # def progress_bar(
@@ -3661,7 +3657,7 @@ def clear_lines():
 def exampleofprogress():
     # Example usage
     total = 100
-    print(f"Starting the process...")
+    print("Starting the process...")
     sys.stdout.flush()
     # time.sleep(2)
     for i in range(total + 1):

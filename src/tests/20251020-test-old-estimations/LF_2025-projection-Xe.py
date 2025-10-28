@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from functioncache import LF_2025, PhysicalQuantity, check
+from functioncache import LF_2025, PhysicalQuantity
 from math import pi
 
 lf2025 = LF_2025()
@@ -32,7 +32,7 @@ freq_list = []
 for freq_val in 10 ** (np.arange(3, 7, 1)):
     freq = PhysicalQuantity(freq_val, "Hz")
     freq_list.append(freq)
-    Tmeas_list.append(10*pi * lf2025.Q_a / freq)
+    Tmeas_list.append(10 * pi * lf2025.Q_a / freq)
 lf2025.B0_max = PhysicalQuantity(0.1, "T")
 freqmax = (lf2025.B0_max * lf2025.gamma / (2 * pi)).convert_to("Hz")
 # check(freqmax)

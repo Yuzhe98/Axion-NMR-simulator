@@ -17,9 +17,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib import font_manager
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 
-from matplotlib.ticker import FuncFormatter
-from scipy.stats import rayleigh, uniform, norm
-import mpltex
+from scipy.stats import norm
 
 font_dir = "fonts"  # adjust if needed
 
@@ -29,8 +27,9 @@ for file in os.listdir(font_dir):
         font_path = os.path.join(font_dir, file)
         font_manager.fontManager.addfont(font_path)
 
+
 def Lorentzian(x, center, FWHM, area, offset):
-    '''
+    """
     Return the value of the Lorentzian function
         offset + 0.5*FWHM*area / (np.pi * ( (x-center)**2 + (0.5*FWHM)**2 )      )
 
@@ -65,7 +64,7 @@ def Lorentzian(x, center, FWHM, area, offset):
     ----------
     Null
 
-    '''
+    """
     return offset + 0.5 * FWHM * area / (
         np.pi * ((x - center) ** 2 + (0.5 * FWHM) ** 2)
     )
@@ -95,15 +94,15 @@ NMR_decayspectrum = (Lorzlin + PSD_noise) * 1e6
 Axion_sensitivity = 1e-12 * 1.0 / np.sqrt(NMR_decayspectrum)
 
 # plot style
-plt.rc('font', size=10)  # font size for all figures
+plt.rc("font", size=10)  # font size for all figures
 # plt.rcParams['font.family'] = 'serif'
 # plt.rcParams['font.serif'] = ['Times New Roman']
-plt.rcParams['font.family'] = 'Times New Roman'
+plt.rcParams["font.family"] = "Times New Roman"
 # plt.rcParams['mathtext.fontset'] = 'dejavuserif'
 
 # Make math text match Times New Roman
-plt.rcParams['mathtext.fontset'] = 'cm'
-plt.rcParams['mathtext.rm'] = 'Times New Roman'
+plt.rcParams["mathtext.fontset"] = "cm"
+plt.rcParams["mathtext.rm"] = "Times New Roman"
 
 # plt.style.use('seaborn-dark')  # to specify different styles
 # print(plt.style.available)  # if you want to know available styles
@@ -142,18 +141,18 @@ ax10 = fig.add_subplot(gs[1, 0])  # , sharex=ax00
 ax00.plot(
     freqStamp,
     NMR_decayspectrum,
-    label='PSD Signal Amp',
-    color='tab:blue',
+    label="PSD Signal Amp",
+    color="tab:blue",
     alpha=1,
-    linestyle='-',
+    linestyle="-",
 )
 # ax00.scatter(freqstamp, NMR_decayspectrum, marker='x', s=30, color='tab:black', alpha=1)
 ax00.errorbar(
     x=freqStamp,
     y=NMR_decayspectrum,
     yerr=np.std(PSD_noise),
-    fmt='s',
-    color='tab:green',
+    fmt="s",
+    color="tab:green",
     linewidth=1,
     markersize=3,
 )
@@ -162,16 +161,16 @@ ax00.fill_between(
     freqStamp,
     NMR_decayspectrum,
     np.amin(NMR_decayspectrum),  #  where = ,
-    color='r',
+    color="r",
     alpha=0.2,
     zorder=6,
 )
 # X_Y_Spline = make_interp_spline(x, y)
 # X_ = np.linspace(x.min(), x.max(), 500)
 # Y_ = X_Y_Spline(X_)
-ax00.set_xlabel('Frequency - $1.348\\,449\\times 10^6$ (Hz)')
-ax00.set_ylabel('PSD ($10^{-6}\\Phi_0^2/ \\mathrm{Hz}$)')
-ax00.set_title('Pulsed-NMR Signal Amplitude')
+ax00.set_xlabel("Frequency - $1.348\\,449\\times 10^6$ (Hz)")
+ax00.set_ylabel("PSD ($10^{-6}\\Phi_0^2/ \\mathrm{Hz}$)")
+ax00.set_title("Pulsed-NMR Signal Amplitude")
 # ax00.set_xscale('log')
 # ax00.set_yscale('log')
 # ax00.set_xticks([])
@@ -198,17 +197,17 @@ ax00.grid()  # set gird color, linewidth and etc.
 #         dy=, width=0.02, head_width=0.199,head_length=0.04, color='black', \
 #             edgecolor='none',length_includes_head=True, shape='full')
 ax00.text(
-    x=0, y=np.amax(Lorzlin) * 0.48, s='$\\Delta\\nu$', ha='center', va='top', color='k'
+    x=0, y=np.amax(Lorzlin) * 0.48, s="$\\Delta\\nu$", ha="center", va="top", color="k"
 )
 ax00.quiver(
     [0, 0],
     [np.amax(Lorzlin) * 0.5, np.amax(Lorzlin) * 0.5],
     [0.5 * FWHM, -0.5 * FWHM],
     [0, 0],
-    angles='xy',
-    scale_units='xy',
+    angles="xy",
+    scale_units="xy",
     scale=1,
-    color='black',
+    color="black",
     width=0.005,
 )
 # quiver(X, Y, U, V)
@@ -221,9 +220,9 @@ ax00.quiver(
 ax00_zoomin: plt.Axes = inset_axes(
     ax00,  # parent axis
     bbox_to_anchor=(0.0, 0.0, 0.2, 1),  # (x0, y0, width, height)
-    width='50%',
-    height='50%',  # the dimensions of the inset plot
-    loc='upper right',  # location in the bounding box
+    width="50%",
+    height="50%",  # the dimensions of the inset plot
+    loc="upper right",  # location in the bounding box
     # position x0, y0) and size (width, height) of the bounding box
     bbox_transform=ax00.transAxes,
     borderpad=0.1,  # padding (safe distance) around the inset plot
@@ -272,7 +271,7 @@ ax00_zoomin.set_ylim(y1, y2)
 # ax00_zoomin.set_yticks([])
 
 # Draw rectangle and connecting lines
-mark_inset(ax00, ax00_zoomin, loc1=2, loc2=4, fc='grey', ec='0.0')
+mark_inset(ax00, ax00_zoomin, loc1=2, loc2=4, fc="grey", ec="0.0")
 # fc: face color of the zoom box (e.g., 'none' for transparent)
 # ec: edge color
 # for loc1 and loc2:
@@ -285,14 +284,14 @@ mark_inset(ax00, ax00_zoomin, loc1=2, loc2=4, fc='grey', ec='0.0')
 
 
 # set visibility of spines / frames
-for pos in ['right', 'top', 'bottom', 'left']:
+for pos in ["right", "top", "bottom", "left"]:
     ax00.spines[pos].set_visible(True)
 
 
-ax10.plot(freqStamp, freqStamp, color='tab:orange', label='plot label', alpha=1)
-ax10.scatter(freqStamp, freqStamp, color='tab:red', marker='x', s=30, alpha=1)
-ax10.set_xlabel('')
-ax10.set_ylabel('')
+ax10.plot(freqStamp, freqStamp, color="tab:orange", label="plot label", alpha=1)
+ax10.scatter(freqStamp, freqStamp, color="tab:red", marker="x", s=30, alpha=1)
+ax10.set_xlabel("")
+ax10.set_ylabel("")
 
 # ax01.set_xscale('log')
 # ax01.set_yscale('log')
@@ -301,9 +300,9 @@ ax10.set_ylabel('')
 # ax01.set_xticks([])
 # ax01.set_yticks([])
 ax10.grid()
-ax10.legend(bbox_to_anchor=(1.0, 1.0), loc='upper left')
+ax10.legend(bbox_to_anchor=(1.0, 1.0), loc="upper left")
 ax012 = ax10.twinx()
-ax012.set_ylabel('', color='tab:red')
+ax012.set_ylabel("", color="tab:red")
 ax012.set_yticks([])
 
 # hist, bin_edges = np.histogram(conv_PSD, bins=30)
@@ -312,19 +311,27 @@ ax012.set_yticks([])
 #         ax21.scatter(bin_edges[i+1], count, color='goldenrod', edgecolors='darkgoldenrod', linewidths=0.8, marker='o', s=2, zorder=6)
 
 
-fig.suptitle('super title', wrap=True)
+fig.suptitle("super title", wrap=True)
 
 # adjust the distance between tick labels and the axis spines (i.e. the edge of the plot)
 for i, ax in enumerate([ax00, ax10]):
-    ax.tick_params(axis='y', which='both', pad=3)  # For y-axis ticks
-    ax.tick_params(axis='x', which='both', pad=3)   # For x-axis ticks
+    ax.tick_params(axis="y", which="both", pad=3)  # For y-axis ticks
+    ax.tick_params(axis="x", which="both", pad=3)  # For x-axis ticks
 
 # put figure index
-letters = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)', '(i)']
+letters = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)", "(i)"]
 for i, ax in enumerate([ax00, ax10]):
     # xleft, xright = ax.get_xlim()
     # ybottom, ytop = ax.get_ylim()
-    ax.text(-0.013, 1.02, s=letters[i], transform=ax.transAxes, ha="right", va="bottom", color='k')
+    ax.text(
+        -0.013,
+        1.02,
+        s=letters[i],
+        transform=ax.transAxes,
+        ha="right",
+        va="bottom",
+        color="k",
+    )
 # ha = 'left' or 'right'
 # va = 'top' or 'bottom'
 
@@ -335,11 +342,11 @@ script_path = os.path.abspath(__file__)
 
 # Add the annotation to the figure
 plt.annotate(
-    f'Generated by: {script_path}',
+    f"Generated by: {script_path}",
     xy=(0.02, 0.02),
-    xycoords='figure fraction',
+    xycoords="figure fraction",
     fontsize=3,
-    color='gray',
+    color="gray",
 )
 # #############################################################################
 

@@ -1,27 +1,19 @@
 import os
 import sys
 
-os.chdir("src")  # 
+import numpy as np
+
+import matplotlib.pyplot as plt
+
+os.chdir("src")  #
 print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
 os.chdir("..")  # go to parent folder
 
-import pandas as pd
-import numpy as np
-import time
-from SimuTools import Sample, MagField, Simulation, gate
-from DataAnalysis import DualChanSig
-from functioncache import check, GiveDateandTime
-
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-
-
-import numpy as np
 
 # Load the .npy file
 # savedir = rf"C:\Users\zhenf\D\Mainz\CASPEr\20250520-tau_a_《_T2/"
-savedir = rf"Tests\20250520-tau_a_《_T2/"
+savedir = r"Tests\20250520-tau_a_《_T2/"
 # fname = "m_transverse_all_runs_20250520_145634"  # rand_seed not None, 300s duration, Brms=1e-10
 # fname = "m_transverse_all_runs_20250520_151127"  # rand_seed not None, 100s duration, Brms=1e-10
 # fname = "m_transverse_all_runs_20250520_151424"  # rand_seed None, 100s duration, Brms=1e-10
@@ -31,14 +23,11 @@ data = np.load(savedir + fname + ".npz")
 
 # data = np.load("sim_data.npz", allow_pickle=True)
 
-print(data["m_t"].shape)  # 
-print(data["simuRate"])  # 
-print(data["duration"])  # 
-print(data["T2"])  # 
+print(data["m_t"].shape)  #
+print(data["simuRate"])  #
+print(data["duration"])  #
+print(data["T2"])  #
 print(data["Brms"])  #
-
-
-
 
 
 # Assuming `data` is your 2D array: shape (n_measurements, n_timepoints)
@@ -51,28 +40,23 @@ stds = np.zeros((n_measurements, n_timepoints))
 for i in range(1, n_measurements + 1, 10):
     # subset = data["m_t"][:i, :]  # Use the first i measurements
     # mean = np.mean(subset, axis=0)  # Mean over the measurements
-    std = np.std(data["m_t"][:i, :], axis=0, ddof=1)  # Standard deviation at each time point
+    std = np.std(
+        data["m_t"][:i, :], axis=0, ddof=1
+    )  # Standard deviation at each time point
     stds[i - 1, :] = std
 
 # Optional: plot the average std across all time points
 avg_std = np.mean(stds, axis=1)
 
 
-
 plt.figure()
 # plt.plot(stds[:,0])
-plt.plot(stds[:,100])
+plt.plot(stds[:, 100])
 # plt.xlabel('Number of Measurements Averaged')
 # plt.ylabel('Average Standard Deviation at Each Time Point')
 # plt.title('Averaging Reduces Variability Over Time Points')
 plt.grid(True)
 plt.show()
-
-
-
-
-
-
 
 
 # m_t_avg = np.mean(data["m_t"], axis=0)

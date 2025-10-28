@@ -1,7 +1,9 @@
 ################################################
 
 # import packages
-import sys, os, glob
+import sys
+import os
+import glob
 import time
 
 # importing and processing hdf5 files
@@ -10,24 +12,21 @@ import h5py
 # plotting
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec  # for creating subplots
-from matplotlib.ticker import ScalarFormatter, FormatStrFormatter, MultipleLocator
+from matplotlib.ticker import MultipleLocator
 
 # basic computations
 import numpy as np
 import math
 
-from scipy.stats import norm, chi2, gamma, rayleigh, uniform, expon
+from scipy.stats import norm, chi2, gamma, uniform, expon
 from scipy.optimize import curve_fit, minimize
 
 # curve fitting (including calculating uncertainties)
 from scipy.signal import find_peaks
 from scipy.io import loadmat, savemat
-from sympy import true
 
-from DataAnalysis import SQUID, DualChanSig
+from DataAnalysis import DualChanSig
 from functioncache import (
-    Lorentzian,
-    MovAvgByStep,
     ReturnMeasureTimFromFile,
     ReturnNMRdata,
     ReturnT2time,
@@ -41,7 +40,6 @@ from functioncache import (
     read_double_precision_floats,
     check,
     extract_number,
-    clear_lines,
     print_progress_bar,
     get_random_color,
 )
@@ -856,7 +854,7 @@ class dmScanStep:
                 marker="o",
                 s=6,
                 zorder=6,
-                label=f"histogram",
+                label="histogram",
             )
             hist_ax.vlines(
                 x=threshold,
@@ -891,7 +889,7 @@ class dmScan:
     def __init__(
         self,
         name,
-        basepath=rf"C:\Users\Admin\Desktop\CASPEr-thermal_DMdata22",
+        basepath=r"C:\Users\Admin\Desktop\CASPEr-thermal_DMdata22",
         analysisname="",
         step_list=[],
         verbose=False,
@@ -1032,9 +1030,9 @@ class dmScan:
 
     def LoadScanFromDict(self, infoDict):
         """
-        example 
+        example
 
-        # 
+        #
         scanstep7_dict = {
             'NoPulseDataPath_list': [],
             'OnePulseDataPath_list': [],
@@ -1049,7 +1047,7 @@ class dmScan:
         for i in range(9, 13 + 1):
             scanstep7_dict['NoPulseDataPath_list'].append(\
                 maindatafolder + rf'\stream_010' + f'/stream_000{i:02}.h5')
-        
+
         info_dict['stepinfo'] = [scanstep0_dict, scanstep1_dict, scanstep2_dict, scanstep3_dict,\
                                 scanstep4_dict, scanstep5_dict, scanstep6_dict, scanstep7_dict]
         """
@@ -1639,7 +1637,7 @@ class dmScan:
                         linestyle="--",
                         linewidth=4,
                         alpha=0.7,
-                        label=rf"Detection threshold ($95~\%$ confidence)",
+                        label=r"Detection threshold ($95~\%$ confidence)",
                     )
                     plt.axvline(
                         x=threshold_exclude,
@@ -1647,7 +1645,7 @@ class dmScan:
                         linestyle="--",
                         linewidth=4,
                         alpha=0.7,
-                        label=rf"Sensitivity threshold ($5\sigma$)",
+                        label=r"Sensitivity threshold ($5\sigma$)",
                     )
 
                     outlier_inds = [
@@ -1667,7 +1665,7 @@ class dmScan:
 
                     # plt.yscale('log')
                     plt.ylim(0.5, 1.5 * max(counts))
-                    plt.xlabel(rf"Normalized power excess")  # [$\Phi_0^2$]
+                    plt.xlabel(r"Normalized power excess")  # [$\Phi_0^2$]
                     plt.ylabel("Counts")
                     # plt.xticks(np.arange(-0.6, 2.0, 0.5))
                     # plt.grid(True, linestyle='--', alpha=0.7)
@@ -4735,7 +4733,7 @@ class SensiCompar:
         PSD_ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
         PSD_ax.xaxis.set_label_position("top")
         if freqoffset == 0:
-            PSD_ax.set_xlabel(f"Frequency / " + specxunit)  # $\\mathrm{Hz}$
+            PSD_ax.set_xlabel("Frequency / " + specxunit)  # $\\mathrm{Hz}$
         else:
             PSD_ax.set_xlabel(
                 f"Frequency - {freqoffset:.0f} / " + specxunit

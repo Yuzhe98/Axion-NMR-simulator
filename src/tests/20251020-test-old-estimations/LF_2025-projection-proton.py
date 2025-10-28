@@ -8,9 +8,7 @@ Low-field sensitivity
 # os.chdir("..")  # if you want to go to parent folder
 # print(os.path.abspath(os.curdir))
 # sys.path.insert(0, os.path.abspath(os.curdir))
-import numpy as np
-from functioncache import LF_2025, PhysicalQuantity, check
-from math import pi
+from functioncache import LF_2025, PhysicalQuantity
 
 lf2025 = LF_2025()
 lf2025.getOmega_a()

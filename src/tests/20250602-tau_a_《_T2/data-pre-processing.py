@@ -4,27 +4,23 @@
 import os
 import sys
 
-os.chdir("src")  #
-print(os.path.abspath(os.curdir))
-sys.path.insert(0, os.path.abspath(os.curdir))
-os.chdir("..")  # go to parent folder
-
-
 import numpy as np
-import time
 from tqdm import tqdm
 from functioncache import check
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
+os.chdir("src")  #
+print(os.path.abspath(os.curdir))
+sys.path.insert(0, os.path.abspath(os.curdir))
+os.chdir("..")  # go to parent folder
 
-import numpy as np
 
 # Load the .npy file
 
 savedir = (
-    rf"C:\Users\zhenf\D\Yu0702\Axion-NMR-simulator\Tests\20250602-tau_a_《_T2\data_0/"
+    r"C:\Users\zhenf\D\Yu0702\Axion-NMR-simulator\Tests\20250602-tau_a_《_T2\data_0/"
 )
 
 fname_head = "theta_all_runs_20250602_134924_"
@@ -46,7 +42,7 @@ for i in tqdm(range(num_runs)):
 
 check(sin_theta_means.shape)
 
-data_file_name = savedir + f"theta_all_runs_20250602_134924_summary" + ".npz"
+data_file_name = savedir + "theta_all_runs_20250602_134924_summary" + ".npz"
 np.savez(
     data_file_name,
     timeStamp=data["timeStamp"],

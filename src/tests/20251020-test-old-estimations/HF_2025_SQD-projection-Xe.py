@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from functioncache import LF_2025, PhysicalQuantity, check
+from functioncache import LF_2025, PhysicalQuantity
 from math import pi
 
 hf2025_SQD = LF_2025(
@@ -109,6 +109,3 @@ hf2025_SQD.plotXe129_Sensi_Phase2(
 
 ax00.legend()
 plt.show()
-
-
-

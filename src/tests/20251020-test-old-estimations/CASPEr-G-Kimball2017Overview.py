@@ -1,19 +1,18 @@
 """
 Low-field sensitivity
 """
+
 # import os
 # import sys
 # os.chdir("..")  # if you want to go to parent folder
 # os.chdir("..")  # if you want to go to parent folder
 # print(os.path.abspath(os.curdir))
 # sys.path.insert(0, os.path.abspath(os.curdir))
-import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from functioncache import LF_2025, PhysicalQuantity, check
-from math import pi
+from functioncache import LF_2025
 
 lf2025 = LF_2025()
 # lf2025.getOmega_a_1()
@@ -66,14 +65,15 @@ fig = plt.figure(
 
 gs = gridspec.GridSpec(nrows=1, ncols=1)  # create grid for multiple figures
 # fix the margins
-left=0.171
-bottom=0.23
-right=0.97
-top=0.983
-wspace=0.24
-hspace=0.114
-fig.subplots_adjust(left=left, top=top, right=right,
-                    bottom=bottom, wspace=wspace, hspace=hspace)
+left = 0.171
+bottom = 0.23
+right = 0.97
+top = 0.983
+wspace = 0.24
+hspace = 0.114
+fig.subplots_adjust(
+    left=left, top=top, right=right, bottom=bottom, wspace=wspace, hspace=hspace
+)
 
 ax00 = fig.add_subplot(gs[0, 0])  #
 # ax01 = fig.add_subplot(gs[0, 1])  #
@@ -98,7 +98,6 @@ lf2025.plot2017OverviewLimit(ax=ax00)
 # ax00.set_xticklabels(["1 kHz", "10 kHz", "100 kHz", "1.2 MHz", "10 MHz", "600 MHz"])
 
 
-
 # ax00.set_xlim(0, 53)
 # ax00.set_ylim(1e-10, 1e-2)
 
@@ -121,7 +120,7 @@ ax00.set_ylim(top=1e-0, bottom=1e-15)
 # ax00.legend(loc='upper right')
 ax00.grid(True)
 
-ax00.set_xlabel(f"Frequency")
+ax00.set_xlabel("Frequency")
 ax00.set_ylabel("$|g_\\mathrm{aNN}| [\\mathrm{GeV}^{-1}]$ ", color="k")
 
 plt.show()

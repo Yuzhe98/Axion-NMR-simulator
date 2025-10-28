@@ -1,27 +1,21 @@
 import os
 import sys
 
-os.chdir("src")  # 
-print(os.path.abspath(os.curdir))
-sys.path.insert(0, os.path.abspath(os.curdir))
-os.chdir("..")  # go to parent folder
-
-import pandas as pd
 import numpy as np
-import time
-from SimuTools import Sample, MagField, Simulation, gate
-from DataAnalysis import DualChanSig
-from functioncache import check, GiveDateandTime
+from functioncache import check
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
+os.chdir("src")  #
+print(os.path.abspath(os.curdir))
+sys.path.insert(0, os.path.abspath(os.curdir))
+os.chdir("..")  # go to parent folder
 
-import numpy as np
 
 # Load the .npy file
 # savedir = rf"C:\Users\zhenf\D\Mainz\CASPEr\20250520-tau_a_《_T2/"
-savedir = rf"Tests\20250520-tau_a_《_T2/"
+savedir = r"Tests\20250520-tau_a_《_T2/"
 # fname = "m_transverse_all_runs_20250520_145634"  # rand_seed not None, 300s duration, Brms=1e-10
 # fname = "m_transverse_all_runs_20250520_151127"  # rand_seed not None, 100s duration, Brms=1e-10
 # fname = "m_transverse_all_runs_20250520_151424"  # rand_seed None, 100s duration, Brms=1e-10
@@ -83,18 +77,20 @@ ax00.plot(data["timeStamp"], m_t_avg, label="tipping angle")
 print(data["gyroratio"] * data["Brms"])
 check(data["gyroratio"] * data["Brms"])
 
-time_sections = [[0, data["T2"] / 10],  [data["T2"] / 3,data["T2"]]]
+time_sections = [[0, data["T2"] / 10], [data["T2"] / 3, data["T2"]]]
 T_2_idx = int(len(data["timeStamp"]) * data["T2"] / data["duration"])
-time_sections_idx = [[0, T_2_idx // 10], [T_2_idx // 10, T_2_idx //2]]
+time_sections_idx = [[0, T_2_idx // 10], [T_2_idx // 10, T_2_idx // 2]]
 
-time_section0 = data["timeStamp"][time_sections_idx[0][0]: time_sections_idx[0][1]]
+time_section0 = data["timeStamp"][time_sections_idx[0][0] : time_sections_idx[0][1]]
 approx_line0 = data["gyroratio"] * data["Brms"] * time_section0
 approx_line0 /= np.mean(approx_line0)
 approx_line0 *= np.mean(m_t_avg[time_sections_idx[0][0] : time_sections_idx[0][1]])
 ax00.plot(time_section0, approx_line0, label="$\\propto t$")
 
-time_section1 = data["timeStamp"][time_sections_idx[1][0]: time_sections_idx[1][1]]
-approx_line1 = data["gyroratio"] * data["Brms"] * np.sqrt(time_section1 * 1. /(1.2 * np.pi ))
+time_section1 = data["timeStamp"][time_sections_idx[1][0] : time_sections_idx[1][1]]
+approx_line1 = (
+    data["gyroratio"] * data["Brms"] * np.sqrt(time_section1 * 1.0 / (1.2 * np.pi))
+)
 approx_line1 /= np.mean(approx_line1)
 approx_line1 *= np.mean(m_t_avg[time_sections_idx[1][0] : time_sections_idx[1][1]])
 ax00.plot(time_section1, approx_line1, label="$\\propto (t \\tau_a)^{1/2}$")

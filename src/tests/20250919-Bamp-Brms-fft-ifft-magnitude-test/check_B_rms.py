@@ -2,19 +2,16 @@ import os
 import sys
 
 
+import numpy as np
+from SimuTools import Sample, MagField, Simulation
+
+# from DataAnalysis import DualChanSig
+from functioncache import check, GiveDateandTime
+
 os.chdir("src")  # go to parent folder
 # print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
 
-import numpy as np
-import time
-from SimuTools import Sample, MagField, Simulation, gate
-# from DataAnalysis import DualChanSig
-from functioncache import check, GiveDateandTime
-
-
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 
 num_runs = 100
 simuRate = 100  #
@@ -38,7 +35,7 @@ timestr = GiveDateandTime()
 
 ExampleSample10MHzT = Sample(
     name="TestSample",  # name of the atom/molecule
-    gyroratio=2
+    gamma=2
     * np.pi
     * (10)
     * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
@@ -62,7 +59,7 @@ simu = Simulation(
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
     demodfreq=demodfreq,
-    B0z=(1e6) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
+    B0z=(1e6) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=simuRate,  #
     duration=duration,
     excField=ALP_Field_grad,
@@ -93,7 +90,7 @@ for i in range(num_runs):
     # B_rms_from_simu = (
     #     np.mean(simu.excField.B_vec[:, 0] ** 2 + simu.excField.B_vec[:, 1] ** 2) ** 0.5
     # )
-    B_rms_from_simu = np.mean(np.abs(simu.excField.B_vec[:, 1])**2) ** 0.5
+    B_rms_from_simu = np.mean(np.abs(simu.excField.B_vec[:, 1]) ** 2) ** 0.5
     # check(B_rms_from_simu)
     B_rms_from_simu_arr.append(B_rms_from_simu)
 

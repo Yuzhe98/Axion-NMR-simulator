@@ -1,19 +1,19 @@
 import os
 import sys
 
+
+import numpy as np
+import time
+from SimuTools import Sample, MagField, Simulation
+
 os.chdir("src")  # go to /src folder
 print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
 
-import numpy as np
-import time
-from SimuTools import Sample, MagField, Simulation, gate
-from DataAnalysis import DualChanSig
-from functioncache import check
 
 ExampleSample10MHzT = Sample(
     name="TestSample",  # name of the atom/molecule
-    gyroratio=2
+    gamma=2
     * np.pi
     * (10)
     * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
@@ -39,7 +39,7 @@ simu = Simulation(
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
     demodfreq=1e6,
-    B0z=(1e6 - 10) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
+    B0z=(1e6 - 10) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=(1e3),  #
     duration=2,
     excField=excField,

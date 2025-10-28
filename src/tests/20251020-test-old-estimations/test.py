@@ -8,12 +8,9 @@ High-field sensitivity
 # os.chdir("..")  # if you want to go to parent folder
 # print(os.path.abspath(os.curdir))
 # sys.path.insert(0, os.path.abspath(os.curdir))
-import numpy as np
 
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 
-from functioncache import LF_2025, PhysicalQuantity, check
+from functioncache import LF_2025, PhysicalQuantity
 from math import pi
 
 hf2025_SQD = LF_2025(
@@ -27,8 +24,7 @@ hf2025_SQD.getOmega_a()
 hf2025_SQD.sampleLXe129_approx()
 
 hf2025_SQD.getEfficPow(
-    RBW_Hz=PhysicalQuantity(1, "Hz"),
-    ALP_lw_Hz=PhysicalQuantity(10, "MHz")
+    RBW_Hz=PhysicalQuantity(1, "Hz"), ALP_lw_Hz=PhysicalQuantity(10, "MHz")
 )
 
 Tmeas_list = []

@@ -1,26 +1,22 @@
 import os
 import sys
 
-
-os.chdir("src")  # go to parent folder
-print(os.path.abspath(os.curdir))
-sys.path.insert(0, os.path.abspath(os.curdir))
-
-import pandas as pd
-import pickle
-
 import numpy as np
-import time
-from SimuTools import Sample, MagField, Simulation, gate
+from SimuTools import Sample, MagField, Simulation
 
 # from DataAnalysis import DualChanSig
-from functioncache import check, GiveDateandTime
+from functioncache import GiveDateandTime
 
 
 # import matplotlib.pyplot as plt
 # import matplotlib.gridspec as gridspec
 
 from tqdm import tqdm
+
+
+os.chdir("src")  # go to parent folder
+print(os.path.abspath(os.curdir))
+sys.path.insert(0, os.path.abspath(os.curdir))
 
 
 num_runs = 1000
@@ -42,7 +38,7 @@ nu_a = -0.7
 use_stoch = True
 
 savedir = (
-    rf"C:\Users\zhenf\D\Yu0702\Axion-NMR-simulator\Tests\20250602-tau_a_《_T2\data_0/"
+    r"C:\Users\zhenf\D\Yu0702\Axion-NMR-simulator\Tests\20250602-tau_a_《_T2\data_0/"
 )
 timestr = GiveDateandTime()
 # # Create DataFrame with time and data columns
@@ -56,7 +52,7 @@ timestr = GiveDateandTime()
 
 ExampleSample10MHzT = Sample(
     name="TestSample",  # name of the atom/molecule
-    gyroratio=2
+    gamma=2
     * np.pi
     * (10)
     * 1e6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
@@ -81,7 +77,7 @@ simu = Simulation(
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
     demodfreq=demodfreq,
-    B0z=(1e6) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
+    B0z=(1e6) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=simuRate,  #
     duration=duration,
     excField=ALP_Field_grad,
@@ -137,7 +133,7 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
         # np.save(f"theta_run_{i}.npy", theta)
 
     #
-    data_file_name = savedir + f"theta_all_runs_" + timestr + f"_{j}.npz"
+    data_file_name = savedir + "theta_all_runs_" + timestr + f"_{j}.npz"
     np.savez(
         data_file_name,
         timeStamp=simu.timeStamp,
@@ -150,7 +146,7 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
         Brms=Brms,
         nu_a=nu_a,
         use_stoch=True,
-        gyroratio=ExampleSample10MHzT.gyroratio,
+        gyroratio=ExampleSample10MHzT.gamma,
     )
 
     # np.save(savedir + f"theta_all_runs_" + timestr + ".npy", results)

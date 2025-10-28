@@ -3,9 +3,6 @@
 ##################################################
 
 import os
-import gc
-
-from attr import dataclass
 
 
 from functioncache import (
@@ -36,12 +33,10 @@ from functioncache import (
     plotaxisfmt_Hz2ppm,
     plotaxisfmt_MHz2ppm,
     MovAvgByStep,
-    checkDrift,
     clear_lines,
 )
 
 import numpy as np
-from numpy.typing import NDArray
 
 # plotting
 import matplotlib.pyplot as plt
@@ -56,17 +51,14 @@ from uncertainties import ufloat
 # for interpolation
 from scipy import interpolate
 
-import scipy.stats as stats
-from scipy.stats import norm, chi2, shapiro
+from scipy.stats import norm, chi2
 
 from scipy.signal import ShortTimeFFT, savgol_filter
 
 # importing and processing hdf5 files
-import h5py
 
 # monitor run time
 import time
-from timeit import timeit
 
 from functools import partial
 
@@ -78,9 +70,8 @@ np.random.seed(None)  # WARNING!
 
 from astropy.time import Time
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
-# from pytnt import TNTFile
 
 # include possible typos of "auto"
 AUTO_LIST = ["AUTO", "AUTP", "AUT0"]
@@ -788,7 +779,7 @@ class DualChanSig:
                 marker="o",
                 s=6,
                 zorder=6,
-                label=f"histogram",
+                label="histogram",
             )
             # plot pdf of gaussian distribution (mean = 0, std = 1)
             xstamp = np.linspace(
@@ -854,12 +845,12 @@ class DualChanSig:
                 print(
                     "Warning: abs(r1-r0) < 100. PSD bins in freqRangeforHist may be too less for histogram"
                 )
-            ax.plot(x, y, color="tab:green", label=f"normalized PSD", linewidth=1)
+            ax.plot(x, y, color="tab:green", label="normalized PSD", linewidth=1)
             ax.plot(
                 x[r0:r1],
                 y[r0:r1],
                 color="tab:red",
-                label=f"data for histogram",
+                label="data for histogram",
                 alpha=0.2,
                 linewidth=2,
             )
@@ -915,7 +906,7 @@ class DualChanSig:
                 marker="o",
                 s=6,
                 zorder=6,
-                label=f"histogram",
+                label="histogram",
             )
 
             # plot pdf of gaussian distribution (mean = 0, std = 1)
@@ -1993,7 +1984,7 @@ class DualChanSig:
         # check if the reptime's / intervals between pulses are large enough
         if np.amin(reptimelen_list) < 2 * (self.acqdelaylen + self.acqtimelen):
             print(
-                f"!!WARNING!! minimum reptimelen < 2 * (acqdelaylen + acqtimelen). You may need to increase repetiton time. Otherwise you could weaken the signal. "
+                "!!WARNING!! minimum reptimelen < 2 * (acqdelaylen + acqtimelen). You may need to increase repetiton time. Otherwise you could weaken the signal. "
             )
 
         del selectPulse_list, reptimelen_list
@@ -2498,7 +2489,7 @@ class DualChanSig:
             plt.grid()
             # plt.title(rf"Spin Echo amplitude in a ${PeriodN}\cdot T $ interval around the echotime center")#\n + self.file
             plt.xlabel("Measurement time [s]")
-            plt.ylabel(f"Spin echo amplitudes [arbitrary units]")
+            plt.ylabel("Spin echo amplitudes [arbitrary units]")
 
             # plt.yticks(np.arange(0, np.max(amplitudes), 0.1))
             plt.gca().set_ylim(bottom=0)
@@ -3614,7 +3605,7 @@ class DualChanSig:
                     marker="o",
                     s=6,
                     zorder=6,
-                    label=f"histogram",
+                    label="histogram",
                 )
 
                 # plot pdf of gaussian distribution (mean = 0, std = 1)
@@ -5908,7 +5899,9 @@ class DualChanSig:
 
         if specxunit.upper() == "HZ_RELATIVE":
             spec_ax.set_xlabel(specxlabel)
-            spec_ax.set_ylabel(spectype + r"$\cdot$" + str(Yfactor) + rf" [{specyunit}]")
+            spec_ax.set_ylabel(
+                spectype + r"$\cdot$" + str(Yfactor) + rf" [{specyunit}]"
+            )
         else:
             spec_ax.set_xlabel(specxlabel + " / " + specxunit)
             spec_ax.set_ylabel(spectype + " / " + specyunit)
@@ -6115,110 +6108,3 @@ class DualChanSig:
 
     # def __del__(self):
     #     print("__del__")
-
-
-class KeaSignal:
-    def __init__(self, name, device="Kea^2", verbose=False):
-        """
-        Args:
-            name: name of the signal
-        Returns:
-            Null
-        """
-        self.name = name
-        self.device = device
-
-    def LoadData(self, file: str, verbose: bool = False):
-        """
-        load Kea^2 data file
-        Parameters:
-            file : str
-            verbose : bool
-        Returns:
-            None
-        """
-        acqfile = open(file + "\\acqu.par", "r")
-        acqpara = acqfile.read()
-        # more to be written about samprat etc.
-        acqfile.close()
-
-        if verbose:
-            print("load Kea data " + file + "\\data.csv")
-        tempdata = np.loadtxt(file + "\\data.csv", delimiter=",")
-        self.dataX = tempdata[:, 1]  # in muV
-        self.dataY = tempdata[:, 2]  # in muV
-        self.dwelltime = abs(tempdata[1, 0] - tempdata[0, 0]) * 1e-6  # in second
-        self.samprate = 1 / self.dwelltime
-        del tempdata
-
-
-class SQUID:
-    def __init__(self, name=None, Mf=None, Rf=None, attenuation=None):  # in Ohm
-        """
-        name : str
-            name of the SQUID. default to 'PhiC6L1W'. 'PhiC73L1' is the other option
-        Mf : float
-            feedback sensitivity which can be found in the SQUID specifications.
-            For the SQUID on channel 3 we usually use before 2024-05, M_f = 1 / (44.12e-6) \Phi_0 / A
-            For the new SQUID on channel 2 we installed on 2024-05 (Sensor ID: C649_O12), M_f = 1 / (44.16e-6) \Phi_0 / A
-        Rf : float
-            feedback resistance in Ohm
-
-        attenuation : float
-            in dB
-        """
-        self.name = name
-        self.Mf = Mf
-        self.Rf = Rf
-        self.attenuation = attenuation
-
-
-# class Experiment:
-
-#     def __init__(
-#         self,
-#         name=None,
-#         exptype = None,  # 'Not specified', 'Kea Pulsed-NMR' 'SQUID Pulsed-NMR'
-#         # 'Spin Moise Measurement' 'CPMG Kea' 'CPMG SQUID'
-#         dateandtime = None,
-#         ):
-#         self.name = name
-#         self.exptype = exptype
-#         self.dateandtime = dateandtime
-#     # There is not always a Expinfo in the data file, therefore it may not always work
-#     # TODO: replace it with some other functions
-#     #print("I will check the file "+allDMfiles[index]+" for the measurement time")
-#     Keadevice = Kea(name='blank')
-#     SQDsensor = SQUID(name=SQUIDname,  # 'Channel 1, S0217' 'Channel 3, S0132'
-#                     Mf = SQUID_Mf,
-#                     Rf = SQUID_Rf,
-#                     attenuation = attenuation,)
-#     Expinfo = Experiment(
-#             name = 'LIA NoPulse Recording',
-#             exptype = 'Exper Type Not specified',
-#             dateandtime = GiveDateandTime(),)
-#     liastream = LIASignal(
-#                     name='LIA data',
-#                     device='LIA',
-#                     device_id='dev4434',
-#                     file=filelist[index],
-#                     verbose=False)
-#     liastream.LoadStream(
-#         Keadevice=Keadevice,
-#         SQDsensor=SQDsensor,
-#         Expinfo=Expinfo,
-#         verbose=False)
-
-#     dateandtime = str(Expinfo.dateandtime.decode('utf-8'))
-
-#     year = int(dateandtime[:4])
-#     month = int(dateandtime[4:6])
-#     day = int(dateandtime[6:8])
-#     hour = dateandtime[9:11]
-#     minute = dateandtime[11:13]
-#     second = dateandtime[13:]
-
-#     date_time_int = math.floor(float(f"{hour}{minute}{second}"))
-#     date_time_str = f"{hour}:{minute}:{second}"
-
-#     return year, month, day, date_time_str, date_time_int

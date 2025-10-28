@@ -1,7 +1,5 @@
-from math import gamma
 import os
 import sys
-from turtle import color
 
 print(os.path.abspath(os.curdir))
 sys.path.insert(0, os.path.abspath(os.curdir))
@@ -13,14 +11,11 @@ sys.path.insert(0, os.path.abspath(os.curdir))
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
-from matplotlib.ticker import ScalarFormatter
-from DataAnalysis import Exclusion, DualChanSig
+from DataAnalysis import DualChanSig
 
 # from DataAnalysis import *
-from functioncache import check, Lorentzian
-from scipy.stats import rayleigh, uniform, norm
+from functioncache import Lorentzian
+from scipy.stats import uniform
 from scipy import signal
 
 

@@ -9,13 +9,12 @@ sys.path.insert(0, os.path.abspath(os.curdir))
 
 import numpy as np
 import time
-from SimuTools import Sample, MagField, Simulation, gate
+from SimuTools import Sample, MagField, Simulation
 from DataAnalysis import DualChanSig
-from functioncache import check
 
 ExampleSample10MHzT = Sample(
     name="TestSample",  # name of the atom/molecule
-    gyroratio=2
+    gamma=2
     * np.pi
     * (10)
     * 10**6,  # [Hz/T]. Remember input it like 2 * np.pi * 11.777*10**6
@@ -23,10 +22,10 @@ ExampleSample10MHzT = Sample(
     tempunit="K",  # temperature scale
     boilpt=165.051,  # [K]
     meltpt=161.40,  # [K]
-    density_liquid=2.942,  # [g/cm^3] at boiling point
+    massDensity=2.942,  # [g/cm^3] at boiling point
     density_gas=5.894 * 10**3,  # [g/cm^3] at STP
     density_solid=None,  # [g/cm^3]
-    molarmass=131.2930,  # [g/mol]
+    molarMass=131.2930,  # [g/mol]
     spindenisty_liquid=None,  # [mol/cm^3]
     spindenisty_gas=None,  # [g/cm^3] at STP
     spindenisty_solid=None,  # [mol/cm^3]
@@ -52,7 +51,7 @@ simu = Simulation(
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
     demodfreq=1e6,
-    B0z=(1e6) / (ExampleSample10MHzT.gyroratio / (2 * np.pi)),  # [T]
+    B0z=(1e6) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=(6696.42871094),  #
     duration=10,
     excField=excField,
@@ -88,7 +87,7 @@ if processdata:
         name="Simulation data",
         device="Simulation",
         device_id="Simulation",
-        file=f"Simulation",
+        file="Simulation",
         verbose=True,
     )
     liastream.attenuation = 0
