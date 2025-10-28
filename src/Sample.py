@@ -1,9 +1,7 @@
-from functioncache import *
-
 import numpy as np
 
 
-from Envelope import *
+from Envelope import PhysicalQuantity
 
 
 class Sample:
