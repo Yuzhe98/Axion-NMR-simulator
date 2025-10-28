@@ -23,3 +23,5 @@ venv/
 *.tsv
 *.png
 *.jpg
+
+src/test/
