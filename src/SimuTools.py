@@ -1864,7 +1864,7 @@ class Simulation:
         h5sample.create_dataset("T2", data=np.array([self.T2]))
         h5sample.create_dataset("pol", data=[self.sample.pol])
         h5sample.create_dataset("vol", data=[self.sample.vol])
-        h5sample.create_dataset("mdm", data=[self.sample.mdm])
+        h5sample.create_dataset("mdm", data=[self.sample.mu])
         h5f.close()
 
     def analyzeTrajectory(

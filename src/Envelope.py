@@ -234,13 +234,14 @@ class PhysicalQuantity:
 
         # Handle specific ufuncs
         if ufunc in (np.exp, np.tanh, np.sin, np.cos, np.sinh, np.cosh):
-            # These only make sense for dimensionless quantities
-            if any(u not in ("", "dimensionless", None) for u in units):
-                raise ValueError(
-                    f"{ufunc.__name__} is only defined for dimensionless quantities."
-                )
-            result = ufunc(*magnitudes)
-            return PhysicalQuantity(result, "")
+            # Convert all inputs to dimensionless before computation
+            dimless_magnitudes = [
+                x.convert_to("").value if isinstance(x, PhysicalQuantity) else x
+                for x in inputs
+            ]
+            result = ufunc(*dimless_magnitudes)
+            return PhysicalQuantity(result, "")  # Result is dimensionless
+
 
         elif ufunc in (np.add, np.subtract):
             # For add/subtract, units must match
@@ -381,8 +382,9 @@ if __name__ == "__main__":
     # cfreq = PhysicalQuantity(1.348570, "MHz")
     # print((cfreq / (gamma_p / (2 * pi))).convert_to("T"))
     # print(PhysicalQuantity(1.0, "ppb").convert_to(""))
+
     # Dimensionless examples
-    x = PhysicalQuantity(1.0, "g")
+    x = PhysicalQuantity(1.0, "cm**3 m**(-3)")
     print("np.exp(x)   =", np.exp(x))
     print("np.tanh(x)  =", np.tanh(x))
     print("np.sin(x)   =", np.sin(x))
@@ -401,7 +403,11 @@ if __name__ == "__main__":
     print("np.multiply(a, b) =", np.multiply(a, b))  # m*m
     print("np.divide(a, c)   =", np.divide(a, c))  # m/s
 
-    print(abs(gamma_Xe129))
+    # print(abs(gamma_Xe129))
+    qu = hbar * gamma_p * PhysicalQuantity(100, "tesla") / (2 * k * PhysicalQuantity(.002, "K"))
+    print(qu.convert_to(""))
+    pol = np.tanh(qu)
+    print(pol)
 
 
 """
