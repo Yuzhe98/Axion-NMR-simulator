@@ -1,8 +1,9 @@
 import numpy as np
-
+from typing import Optional
 
 from src.Envelope import (
     PhysicalQuantity,
+    _safe_convert,
     gamma_Xe129,
     gamma_p,
     mu_p,
@@ -11,9 +12,12 @@ from src.Envelope import (
     kB,
     mol_to_num,
 )
+import h5py
+
+from src.functioncache import PhysicalObject
 
 
-class Sample:
+class Sample(PhysicalObject):
     """
     Describe the sample used in experiments.
     Only consider samples in one phase.
@@ -22,21 +26,21 @@ class Sample:
     def __init__(
         self,
         name=None,  # name of the sample
-        gamma: PhysicalQuantity = None,  # gyromagnetic ratio. Remember input it like 2 * np.pi * 11.777*10**6
-        massDensity: PhysicalQuantity = None,  # mass density at STP
-        molarMass: PhysicalQuantity = None,  # molar mass [g/mol]
-        numOfSpinsPerMolecule: PhysicalQuantity = None,  # number of spins per molecule
-        T2: PhysicalQuantity = None,  #
-        T1: PhysicalQuantity = None,  #
-        vol: PhysicalQuantity = None,
-        mu: PhysicalQuantity = None,  # magnetic dipole moment
-        # boilPt: PhysicalQuantity = None,  #
-        # meltPt: PhysicalQuantity = None,  #
+        gamma: Optional[PhysicalQuantity] = None,  # gyromagnetic ratio. Remember input it like 2 * np.pi * 11.777*10**6
+        massDensity: Optional[PhysicalQuantity] = None,  # mass density at STP
+        molarMass: Optional[PhysicalQuantity] = None,  # molar mass [g/mol]
+        numOfSpinsPerMolecule: Optional[PhysicalQuantity] = None,  # number of spins per molecule
+        T2: Optional[PhysicalQuantity] = None,  #
+        T1: Optional[PhysicalQuantity] = None,  #
+        vol: Optional[PhysicalQuantity] = None,
+        mu: Optional[PhysicalQuantity] = None,  # magnetic dipole moment
+        # boilPt: Optional[PhysicalQuantity] = None,  #
+        # meltPt: Optional[PhysicalQuantity] = None,  #
         # spindenisty_liquid=None,  # [mol/cm^3]
         # spindenisty_gas=None,  # [g/cm^3] at STP
         # spindenisty_solid=None,  # [mol/cm^3]
         # shareofpeaks=None,  # array or list.
-        temp: PhysicalQuantity = None,
+        temp: Optional[PhysicalQuantity] = None,
         verbose: bool = False,
     ):
         """
@@ -80,6 +84,20 @@ class Sample:
 
         self.mu = mu
         self.temp = temp
+        # Specify common units for automatic conversion
+        self.physicalQuantities = {
+            "gamma": "Hz/T",
+            "massDensity": "g/cm**3",
+            "molarMass": "g/mol",
+            "numOfSpinsPerMolecule": "",
+            "T2": "s",
+            "T1": "s",
+            "vol": "cm**3",
+            "mu": "J/T",
+            "temp": "K"
+        }
+        # make sure that we use common units for quantities
+        self.useCommonUnits()
 
     def getThermalPol(
         self,
@@ -107,12 +125,13 @@ class Sample:
         return M0
 
 
+
 liquid_Xe129 = Sample(
     name="Liquid Xe-129",  # name of the sample
     gamma=gamma_Xe129,  # [Hz/T]. Remember input it with 2 * np.pi
     massDensity=PhysicalQuantity(3.1, "g / cm**3 "),  # mass density at STP
     molarMass=PhysicalQuantity(131.29, "g / mol"),  # molar mass [g/mol]
-    numOfSpinsPerMolecule=1,  # number of spins per molecule
+    numOfSpinsPerMolecule=PhysicalQuantity(1, ""),  # number of spins per molecule
     T2=PhysicalQuantity(1000, "s"),  #
     T1=PhysicalQuantity(5000, "s"),  #
     vol=PhysicalQuantity(1, "cm**3"),
@@ -126,7 +145,7 @@ methanol = Sample(
     gamma=gamma_p,  # [Hz/T]. Remember input it with 2 * np.pi
     massDensity=PhysicalQuantity(0.792, "g / cm**3 "),
     molarMass=PhysicalQuantity(32.04, "g / mol"),  # molar mass
-    numOfSpinsPerMolecule=4,  # number of spins per molecule
+    numOfSpinsPerMolecule=PhysicalQuantity(4, ""),  # number of spins per molecule
     T2=PhysicalQuantity(1, "s"),  #
     T1=PhysicalQuantity(5, "s"),  #
     vol=PhysicalQuantity(1, "cm**3"),
@@ -142,7 +161,7 @@ ethanol = Sample(
     gamma=gamma_p,  # [Hz/T]. Remember input it with 2 * np.pi
     massDensity=PhysicalQuantity(0.78945, "g / cm**3 "),
     molarMass=PhysicalQuantity(46.069, "g / mol"),  # molar mass
-    numOfSpinsPerMolecule=6,  # number of spins per molecule
+    numOfSpinsPerMolecule=PhysicalQuantity(6, ""),  # number of spins per molecule
     T2=PhysicalQuantity(1, "s"),  #
     T1=PhysicalQuantity(5, "s"),  #
     vol=PhysicalQuantity(1, "cm**3"),

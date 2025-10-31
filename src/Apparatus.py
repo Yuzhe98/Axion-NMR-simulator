@@ -4,40 +4,32 @@
 
 
 import numpy as np
-
+from typing import Optional
 from src.Sample import Sample
 
 from src.Envelope import (
     PhysicalQuantity,
+    _safe_convert,
     gamma_p,
     hbar,
     kB,
     mu_0,
     c,
 )
+import h5py
+from src.functioncache import PhysicalObject
 
-
-class SQUID:
+class SQUID(PhysicalObject):
     def __init__(
         self,
         name=None,
-        Lin: PhysicalQuantity = None,  # inoput coil inductance
-        Min: PhysicalQuantity = None,  # mutual inductance
-        Mf: PhysicalQuantity = None,
-        Rf: PhysicalQuantity = None,
-        attenuation: PhysicalQuantity = None,
+        Lin: Optional[PhysicalQuantity] = None,  # inoput coil inductance
+        Min: Optional[PhysicalQuantity] = None,  # mutual inductance
+        Mf: Optional[PhysicalQuantity] = None,
+        Rf: Optional[PhysicalQuantity] = None,
+        attenuation: Optional[PhysicalQuantity] = None,
     ):  # in Ohm
         """
-        name : str
-            name of the SQUID. default to 'PhiC6L1W'. 'PhiC73L1' is the other option
-        Mf : float
-            feedback sensitivity which can be found in the SQUID specifications.
-            For the SQUID on channel 3 we usually use before 2024-05, M_f = 1 / (44.12e-6) \Phi_0 / A
-            For the new SQUID on channel 2 we installed on 2024-05 (Sensor ID: C649_O12), M_f = 1 / (44.16e-6) \Phi_0 / A
-        Rf : float
-            feedback resistance in Ohm
-        attenuation : float
-            in dB
         """
         self.name = name
         self.Lin = Lin
@@ -45,27 +37,24 @@ class SQUID:
         self.Mf = Mf
         self.Rf = Rf
         self.attenuation = attenuation
+        # Specify common units for automatic conversion
+        self.physicalQuantities = {
+            "Lin": "nH",
+            "Min": "Phi_0/microA",
+            "Mf": "Phi_0/microA",
+            "Rf": "ohm",
+            "attenuation": "dB"
+        }   
+        # make sure that we use common units for quantities
+        self.useCommonUnits()
 
-
-SQD = SQUID(
-    name=None,
-    Lin=PhysicalQuantity(400, "nH"),  # inoput coil inductance
-    Min=PhysicalQuantity(1 / 0.5194, "Phi_0/microA"),  # mutual inductance
-    Mf=None,
-    Rf=None,
-    attenuation=None,
-)
-
-
-class Pickup:
+class Pickup(PhysicalObject):
     def __init__(
         self,
         name=None,
-        gV: PhysicalQuantity = PhysicalQuantity(
-            37.0, "1/m"
-        ),  # sample-to-pickup coupling strength
-        Lcoil: PhysicalQuantity = None,  # coil inductance
-        vol: PhysicalQuantity = None,  # volume of the pickup
+        Lcoil: Optional[PhysicalQuantity] = None,  # coil inductance
+        gV: Optional[PhysicalQuantity] = None,  # sample-to-pickup coupling strength
+        vol: Optional[PhysicalQuantity] = None,  # volume of the pickup
         verbose: bool = False,
     ):  # in Ohm
         """
@@ -73,25 +62,26 @@ class Pickup:
             name of the
         """
         self.name = name
+        self.Lcoil = Lcoil
         self.gV = gV
         self.vol = vol
+        # Specify common units for automatic conversion
+        self.physicalQuantities = {
+            "Lcoil": "nH",
+            "gV": "1/meter",
+            "vol": "cm**3"
+        }
+        # make sure that we use common units for quantities
+        self.useCommonUnits()
 
 
-gradiometer = Pickup(
-    name="gradiometer on PEEK",
-    gV=PhysicalQuantity(37.0, "1/m"),  # sample-to-pickup coupling strength
-    # assume cylindrical sample (R=4 mm, H=22.53 mm) coupling to the gradiometer
-    Lcoil=PhysicalQuantity(400, "nH"),
-    vol=PhysicalQuantity(np.pi * 14**2 * 22.53, "mm**3"),
-)
 
-
-class Magnet:
+class Magnet(PhysicalObject):
     def __init__(
         self,
         name=None,
-        B0: PhysicalQuantity = None,
-        lw_ppm: PhysicalQuantity = None,
+        B0: Optional[PhysicalQuantity] = None,
+        lw: Optional[PhysicalQuantity] = None,
         verbose: bool = False,
     ):  # in Ohm
         """
@@ -100,28 +90,27 @@ class Magnet:
         """
         self.name = name
         self.B0 = B0
-        self.lw_ppm = lw_ppm
+        self.lw = lw
+        # Specify common units for automatic conversion
+        self.physicalQuantities = {
+            "B0": "T",
+            "lw": ""
+        }
+        # make sure that we use common units for quantities
+        self.useCommonUnits()
 
 
-LFmagnet = Magnet(
-    name=None,
-    B0=PhysicalQuantity(0.1, "T"),
-    lw_ppm=PhysicalQuantity(10, "ppm"),
-)
 
-Halbach = Magnet(name=None, lw_ppm=None, B0=PhysicalQuantity(1.0, "T"))
-
-
-class LockinAmplifier:
+class LockinAmplifier(PhysicalObject):
     def __init__(
         self,
         name=None,
-        demodFreq: PhysicalQuantity = None,
-        sampRate: PhysicalQuantity = None,
-        DTRC_Tc: PhysicalQuantity = None,
-        DTRC_order: PhysicalQuantity = None,
-        # : PhysicalQuantity = None,
-        # : PhysicalQuantity = None,
+        demodFreq: Optional[PhysicalQuantity] = None,
+        sampRate: Optional[PhysicalQuantity] = None,
+        DTRC_TC: Optional[PhysicalQuantity] = None,
+        DTRC_order: Optional[PhysicalQuantity] = None,
+        # : Optional[PhysicalQuantity] = None,
+        # : Optional[PhysicalQuantity] = None,
         verbose: bool = False,
     ):  # in Ohm
         """
@@ -131,16 +120,50 @@ class LockinAmplifier:
         self.name = name
         self.demodFreq = demodFreq
         self.sampRate = sampRate
-        self.DTRC_Tc = DTRC_Tc
+        self.DTRC_TC = DTRC_TC
         self.DTRC_order = DTRC_order
+        self.physicalQuantities = {
+            "demodFreq": "Hz",
+            "sampRate": "Hz",
+            "DTRC_TC": "s",
+            "DTRC_order": ""
+        }
+        # make sure that we use common units for quantities
+        self.useCommonUnits()
 
+
+C649_O12 = SQUID(
+    name="C649_O12 in Nb capsule S219, channel 2",
+    Lin=PhysicalQuantity(400, "nH"),  # inoput coil inductance
+    Min=PhysicalQuantity(1 / 0.525, "Phi_0/microA"),  # mutual inductance
+    Mf=PhysicalQuantity(1 / 44.16, "Phi_0/microA"),
+    Rf=PhysicalQuantity(3, "kiloohm"),
+    attenuation=None,
+)
+
+
+gradiometer = Pickup(
+    name="(old) gradiometer on PEEK",
+    Lcoil=PhysicalQuantity(400, "nH"),
+    gV=PhysicalQuantity(37.0, "1/m"),  # sample-to-pickup coupling strength
+    # assume cylindrical sample (R=4 mm, H=22.53 mm) coupling to the gradiometer
+    vol=PhysicalQuantity(np.pi * 14**2 * 22.53, "mm**3"),
+)
+
+LFmagnet = Magnet(
+    name="LF magnet",
+    B0=PhysicalQuantity(0.1, "T"),
+    lw=PhysicalQuantity(10, "ppm"),
+)
+
+Halbach = Magnet(name=None, lw=None, B0=PhysicalQuantity(1.0, "T"))
 
 LIA = LockinAmplifier(
     name="virtual LIA",
     demodFreq=PhysicalQuantity(1.0, "MHz"),
     sampRate=None,
-    DTRC_Tc=None,
-    DTRC_order=None,
+    DTRC_TC=PhysicalQuantity(1.0, "s"),
+    DTRC_order=PhysicalQuantity(0, ""),
     verbose=False,
 )
 

@@ -6,26 +6,26 @@ import sys
 import math
 
 # from turtle import colorpartial
-import matplotlib
-import matplotlib.axes
+# import matplotlib
+# import matplotlib.axes
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import matplotlib.ticker as mticker
+# import matplotlib.ticker as mticker
 from matplotlib.patches import FancyArrowPatch
 
 # from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d import proj3d
 
 # from astropy.time import Time
-from datetime import datetime
-from tqdm import tqdm
-import random
+# from datetime import datetime
+# from tqdm import tqdm
+# import random
 
 from functools import partial
 
-import scipy.stats as stats
-from scipy.stats import rayleigh, uniform, norm, chi2, gamma
+# import scipy.stats as stats
+# from scipy.stats import rayleigh, uniform, norm, chi2, gamma
 
 # import numba as nb
 # from numba import jit, vectorize
@@ -33,11 +33,14 @@ from scipy.stats import rayleigh, uniform, norm, chi2, gamma
 # import pyautogui
 
 # from DataAnalysis import LIASignal, SQUID
-import pandas as pd
+# import pandas as pd
 
 # from evidently.report import Report
 # from evidently.metric_preset import DataDriftPreset
 
+from src.Envelope import PhysicalQuantity, _safe_convert
+from typing import Optional
+import h5py
 
 def GiveDateandTime():
     timestr = time.strftime("%Y%m%d_%H%M%S")
@@ -65,13 +68,13 @@ def check(arg):
 
     TERMINAL OUTPUT:
 
-    d:\Yu0702\casper-gradient-code\\testofcheckpoint.py @45 a : ndarray(array([[0., 0., 0., 0.], [0., 0., 0., 0.]])) [shape=(2, 4)]
+    casper-gradient-code\\testofcheckpoint.py @45 a : ndarray(array([[0., 0., 0., 0.], [0., 0., 0., 0.]])) [shape=(2, 4)]
 
-    d:\Yu0702\casper-gradient-code\\testofcheckpoint.py @47 a : ndarray(array([[1., 1., 1., 1.], [1., 1., 1., 1.]])) [shape=(2, 4)]
+    casper-gradient-code\\testofcheckpoint.py @47 a : ndarray(array([[1., 1., 1., 1.], [1., 1., 1., 1.]])) [shape=(2, 4)]
 
-    d:\Yu0702\casper-gradient-code\\testofcheckpoint.py @48 len(a) : int(2)
+    casper-gradient-code\\testofcheckpoint.py @48 len(a) : int(2)
 
-    d:\Yu0702\casper-gradient-code\\testofcheckpoint.py @49 a.shape : tuple((2, 4)) [len=2]
+    casper-gradient-code\\testofcheckpoint.py @49 a.shape : tuple((2, 4)) [len=2]
 
 
     Copyright info:
@@ -1866,505 +1869,505 @@ def MethanolCS2temp(
         raise ValueError("tempunit wrong")
 
 
-def Methanoltemp2CS(
-    temp=None,
-    tempunit="C",
-    CSunit="ppm",  # 'ppm' 'Hz'
-    referfreq=1e6,  # in Hz
-):
-
-    a = -23.832
-    b = -29.46
-    c = 403.0
-    # temp_arr = a * CS_arr**2 + b * CS_arr + c
-    if tempunit == "C":
-        CSval = (-b - np.sqrt(b**2 - 4 * a * (c - temp - 273.15))) / (2 * a)
-    elif tempunit == "K":
-        CSval = (-b - np.sqrt(b**2 - 4 * a * (c - temp))) / (2 * a)
-    else:
-        raise ValueError("tempunit wrong")
-
-    if CSunit == "ppm":
-        pass
-    elif CSunit == "Hz":
-        CSval *= referfreq
-    else:
-        raise ValueError("CSunit wrong")
-    return CSval
-
-
-def MethanolChemicalShift(
-    temprange=[0, -90],
-    temparrnum=1000,
-    plotxunit="C",
-    plotxunit2="K",
-    plotyunit="ppm",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
-    plotyunit2="Hz",
-    referencefreq=1.349500e6,  # default 1349500 Hz
-    plotx2format="{:.3f}",
-    # formatter = mticker.FuncFormatter(lambda y, pos: '{:.3f}'.format(specxaxis2))
-    # ampunit='Phi',  #  'muV' 'muPhi' 'Phi' 'V'
-    plotyscale="linear",  # 'log', 'linear'
-    specxlim=[],
-    specylim=[],
-    top=0.9,
-    bottom=0.1,
-    left=0.1,
-    right=0.93,
-    hspace=0.4,
-    wspace=0.295,
-    vlinex=None,
-    showplt_opt=True,
-    saveplt_opt=False,
-    saveSpecData_opt=False,
-    save_path=None,
-    save_msg=None,
-    return_opt=False,
-    verbose=False,
-):
-    """
-    # T = 403.0 - 0.491 deltanu -66.2 (10^-2 deltanu)^2
-    175 - 330 K
-    Calibration of Methanol Nuclear Magnetic Resonance Thermometerat Low Temperature
-    ANALYTICAL CHEMISTRY, VOL. 42, NO. 6, MAY 1970
-    Anthony L. Van Geet
-
-    A. L. Van Geet, Anal. Chem., 40, 2227 (1968).
-    Calibration of the Methanol and Glycol Nuclear Magnetic Resonance Thermometers with a Static Thermistor Probe
-    Anthony L. Van Geet
-    Department of Chemistry, State University of New York, Buffalo, N. Y. 14214
-
-    https://www.versci.com/cwnmr/index.html
-    """
-    temp_arr = np.linspace(
-        start=temprange[0],
-        stop=temprange[1],
-        num=temparrnum,
-        endpoint=True,
-        dtype=float,
-    )
-    CS_arr = Methanoltemp2CS(temp=temp_arr)
-
-    # a = -66.2*1e-4
-    # b = -0.491
-    # c = 403.0
-    plt.rc("font", size=14)
-    fig = plt.figure(figsize=(8, 6))  #
-    gs = gridspec.GridSpec(nrows=1, ncols=1)  #
-    fig.subplots_adjust(
-        left=left, top=top, right=right, bottom=bottom, wspace=wspace, hspace=hspace
-    )
-    CStemp_ax = fig.add_subplot(gs[0, 0])
-    CStemp_ax.plot(temp_arr, CS_arr)
-    CStemp_ax.scatter(temp_arr, CS_arr)
-    CStemp_ax.set_xlabel("Temperature / $\degree C$")
-    CStemp_ax.set_ylabel("Chemical shift /ppm")
-    # peakamp_ax_ylim = peakamp_ax.get_ylim()
-    CStemp_ax.set_ylim(bottom=0, top=1.2 * (CStemp_ax.get_ylim()[1]))
-
-    CStemp_ax2 = CStemp_ax.twiny()
-    CStemp_ax2.set_xlabel("Temperature / K")
-    CStemp_ax2.set_xlim(CStemp_ax.get_xlim())
-    print(CStemp_ax.get_xlim())
-    # apply a function formatter
-    axisfmt_partial = partial(axisfmt_C2K, format_string="{:.0f}")
-    formatter = mticker.FuncFormatter(axisfmt_partial)
-    CStemp_ax2.xaxis.set_major_formatter(formatter)
-
-    if showplt_opt:
-        plt.show()
-    plt.close()
-    return 0
-
-
-def constOne(t=None):
-    return 1
-
-
-def statUni2Pi(num=None, showplt=False, verbose=False):
-    """
-    return an array of N numbers which obeys Uniform distribution
-    Parameters
-    ----------
-
-    num : int
-    the length of return array. None by default.
-
-    showplt : bool
-    Whether to plot histogram of the distribution
-
-    verbose : bool
-
-    Examples
-    --------
-    >>>
-
-    Reference
-    ----------
-
-    """
-    r = uniform.rvs(loc=0, scale=2 * np.pi, size=num)
-    if verbose:
-        check(r)
-    if showplt:
-        fig = plt.figure(figsize=(4, 3), dpi=150)  #
-        gs = gridspec.GridSpec(nrows=1, ncols=1)  #
-        # fig.subplots_adjust(left=left_spc, top=top_spc, right=right_spc,
-        #                     bottom=bottom_spc, wspace=xgrid_spc, hspace=ygrid_spc)
-        # make plot for time domain signal
-        ax = fig.add_subplot(gs[0, 0])
-        ax.hist(
-            r, density=False, histtype="stepfilled", alpha=0.9, range=(0, 2 * np.pi)
-        )
-        # ax.legend(loc='best', frameon=False)
-        ax.set_ylabel("Count")
-        ax.set_title("Uniform distribution [0, 2*Pi]")
-        plt.show()
-    return r
-
-
-def fRayleigh(x, sigma, verbose=False):
-    stepx = (x + abs(x)) / 2.0
-    return stepx / sigma**2 * np.exp(-(stepx**2) / 2 / sigma**2)
-
-
-def statRayleigh(sigma=None, num=None, showplt=False, verbose=False):
-    """
-    return an array of N numbers which obeys Rayleigh distribution
-
-    Parameters
-    ----------
-    sigma : float
-
-    parameter for the distribution. None by default.
-
-    num : int
-
-    the length of return array. None by default.
-
-    showplt : bool
-
-    Whether to plot histogram of the distribution
-
-    verbose : bool
-
-    Examples
-    --------
-
-    Exampl 1
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from functioncache import *
-    r0=statRayleigh(
-            sigma=3,
-            num=1000,
-            showplt=False,
-            verbose=False
-        )
-    r1=statRayleigh(
-            sigma=3,
-            num=1000,
-            showplt=False,
-            verbose=False
-        )
-    fig = plt.figure(dpi=150)
-    gs = gridspec.GridSpec(nrows=1, ncols=1)
-    # fig.subplots_adjust(top=0.88,bottom=0.11,left=0.07,right=0.99,hspace=0.2,wspace=0.2)
-    ax = fig.add_subplot(gs[0,0])
-    ax.hist(r0,density=False, histtype='step', label='r0', alpha=0.9)
-    ax.hist(r1,density=False, histtype='step', label='r1', alpha=0.9)
-    ax.hist(r0+r1,density=False, histtype='step', label='r0+r1', alpha=0.9)
-    ax.hist(0.25*r0+0.75*r1,density=False, histtype='step', label='0.25*r0+0.75*r1', alpha=0.9)
-    ax.legend(loc='best', frameon=True, fontsize=8)
-    ax.set_ylabel(f'Count')
-    ax.set_xlabel(f'Amplitude')
-    ax.grid()
-    plt.show()
-
-    Example 2
-
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from functioncache import *
-    sigma=3
-    lenofarray=2000
-    r0=statRayleigh(
-            sigma=sigma,
-            num=lenofarray,
-            showplt=False,
-            verbose=False
-        )
-    r1=statRayleigh(
-            sigma=sigma,
-            num=lenofarray,
-            showplt=False,
-            verbose=False
-        )
-    rsum = np.sqrt(r0**2+r1**2)/ np.sqrt(2)
-    g0=statGaussian(
-            mu=0,
-            sigma=sigma,
-            num=lenofarray,
-            showplt=False,
-            verbose=False
-        )
-    g1=statGaussian(
-            mu=0,
-            sigma=sigma,
-            num=lenofarray,
-            showplt=False,
-            verbose=False
-        )
-    g2=statGaussian(
-            mu=0,
-            sigma=sigma,
-            num=lenofarray,
-            showplt=False,
-            verbose=False
-        )
-    r1 = np.sqrt(g0**2+g1**2)
-    r2 = np.sqrt(g0**2 + g1**2 + g2**2)
-    fig = plt.figure(dpi=150)  #figsize=(10, 4),
-    gs = gridspec.GridSpec(nrows=1, ncols=1)  #
-    ax = fig.add_subplot(gs[0,0])
-    ax.hist(r0,density=True, histtype='step', label='r0', alpha=0.9)
-    ax.hist(rsum,density=True, histtype='step', label='np.sqrt(r0**2+r1**2)', alpha=0.9)
-    ax.hist(r1,density=True, histtype='step', label='np.sqrt(g0**2+g1**2)', alpha=0.9)
-    ax.hist(r2,density=True, histtype='step', label='r2', alpha=0.9)
-    ax.legend(loc='best', frameon=True, fontsize=8)
-    ax.set_ylabel(f'Count')
-    ax.set_xlabel(f'')
-    ax.grid()
-    plt.show()
-
-    Notes
-    -----
-    Rayleigh distribution f(x;sigma) = x/sigma^2 * exp(-x^2/(2 sigma^2))
-
-    Mean value: (pi/2)^0.5 sigma
-
-    standard deviation: (2-pi/2)^0.5 sigma
-
-
-
-    Reference
-    ----------
-    https://en.wikipedia.org/wiki/Rayleigh_distribution
-
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rayleigh.html
-    """
-    r = rayleigh.rvs(loc=0, scale=sigma, size=num)
-    if verbose:
-        check(r)
-    if showplt:
-        fig = plt.figure(figsize=(4, 3), dpi=150)  #
-        gs = gridspec.GridSpec(nrows=1, ncols=1)  #
-        # fig.subplots_adjust(left=left_spc, top=top_spc, right=right_spc,
-        #                     bottom=bottom_spc, wspace=xgrid_spc, hspace=ygrid_spc)
-        # make plot for time domain signal
-        ax = fig.add_subplot(gs[0, 0])
-        ax.hist(
-            r, density=False, histtype="stepfilled", alpha=0.9, range=(0, np.amax(r))
-        )
-        # ax.legend(loc='best', frameon=False)
-        ax.set_ylabel("Count")
-        ax.set_title(f"Rayleigh distribution sigma={sigma}")
-        plt.show()
-    return r
-
-
-def randomwalk2D(sigma=None, numofstep=None, num=None, showplt=False, verbose=False):
-    """
-    Random walk on 2D plane
-
-    """
-    r = rayleigh.rvs(loc=0, scale=sigma, size=num)
-    rw2D = []
-    for i in range(num):
-        phase = uniform.rvs(loc=0, scale=2 * np.pi, size=numofstep)
-        sin_arr = np.sin(phase)
-        cos_arr = np.cos(phase)
-        rw2D.append(np.sum(cos_arr) + 1j * np.sum(sin_arr))
-    rw2D = sigma * np.array(rw2D, dtype=np.complex64) / np.sqrt(numofstep / 2.0)
-    if verbose:
-        check(rw2D)
-
-    if showplt:
-        fig = plt.figure(figsize=(10, 4), dpi=150)  #
-        gs = gridspec.GridSpec(nrows=1, ncols=2)  #
-        fig.subplots_adjust(
-            top=0.88, bottom=0.11, left=0.07, right=0.99, hspace=0.2, wspace=0.2
-        )
-        # make plot for time domain signal
-        ax = fig.add_subplot(gs[0, 0])
-        ax.hist(
-            r,
-            bins=40,
-            density=False,
-            histtype="step",
-            label="Rayleigh distribution",
-            alpha=0.9,
-            range=(0, np.amax(r)),
-        )
-        ax.hist(
-            np.abs(rw2D.real),
-            bins=40,
-            density=False,
-            histtype="step",
-            label="Amplitude of 1D random walk - cos",
-            alpha=0.9,
-        )
-        ax.hist(
-            np.abs(rw2D.imag),
-            bins=40,
-            density=False,
-            histtype="step",
-            label="Amplitude of 1D random walk - sin",
-            alpha=0.9,
-        )
-        ax.hist(
-            np.abs(rw2D),
-            bins=50,
-            density=False,
-            histtype="step",
-            label="Amplitude of 2D random walk",
-            alpha=0.9,
-        )
-        ax.legend(loc="best", frameon=True, fontsize=8)
-        ax.set_ylabel("Count")
-        ax.set_xlabel("Amplitude")
-        # ax.set_title(f'Rayleigh distribution sigma={sigma}')
-        ax.grid()
-
-        ax2 = fig.add_subplot(gs[0, 1])
-        # ax.hist(r, density=False, histtype='step', label='Rayleigh distribution', alpha=0.9, range=(0,np.amax(r)))
-        ax2.hist(
-            np.angle(rw2D) + np.pi,
-            bins=40,
-            density=False,
-            histtype="bar",
-            label="Phase of 2D random walk",
-            alpha=0.9,
-            range=(0, 2 * np.pi),
-        )
-        ax2.legend(loc="best", frameon=True)
-        # ax2.set_ylabel(f'Count')
-        ax2.set_xlabel("Phase")
-        ax2.grid()
-
-        plt.show()
-    return rw2D
-
-
-def statGaussian(mu=None, sigma=None, num=None, showplt=False, verbose=False):
-    """ """
-    r = norm.rvs(loc=mu, scale=sigma, size=num, random_state=None)
-    if verbose:
-        check(r)
-    if showplt:
-        fig = plt.figure(figsize=(4, 3), dpi=150)  #
-        gs = gridspec.GridSpec(nrows=1, ncols=1)  #
-        # fig.subplots_adjust(left=left_spc, top=top_spc, right=right_spc,
-        #                     bottom=bottom_spc, wspace=xgrid_spc, hspace=ygrid_spc)
-        # make plot for time domain signal
-        ax = fig.add_subplot(gs[0, 0])
-        ax.hist(r, density=False, histtype="stepfilled", alpha=0.9)
-        # ax.legend(loc='best', frameon=False)
-        ax.set_ylabel("Count")
-        ax.set_title(f"Gaussian distribution sigma={sigma}")
-        plt.show()
-    return r
-
-
-def sph2orth1d(vec=None):
-    orth = np.zeros(3)
-    orth[0] = vec[0] * np.sin(vec[1]) * np.cos(vec[2])
-    orth[1] = vec[0] * np.sin(vec[1]) * np.sin(vec[2])
-    orth[2] = vec[0] * np.cos(vec[1])
-    return orth
-
-
-def sph2orth(vec=None):
-    if len(vec.shape) == 1:
-        return sph2orth1d(vec)
-    elif len(vec.shape) == 2:
-        xyz = np.zeros(np.shape(vec))
-        xyz[:, 0] = vec[:, 0] * np.sin(vec[:, 1]) * np.cos(vec[:, 2])
-        xyz[:, 1] = vec[:, 0] * np.sin(vec[:, 1]) * np.sin(vec[:, 2])
-        xyz[:, 2] = vec[:, 0] * np.cos(vec[:, 1])
-        return xyz
-    else:
-        raise ValueError("len(vec.shape)<=0 or len(vec.shape)>=3")
-
-
-def Rad2Deg(vec=None):
-    r = vec
-    r[:, 1:] *= 180.0 / np.pi
-    return r
-
-
-def Rad2Deg1d(vec=None):
-    r = vec
-    r[1:] *= 180.0 / np.pi
-    return r
-
-
-"""
-def orth2sph(vec):
-    x=vec[0]
-    y=vec[1]
-    z=vec[2]
-    r=(x**2+y**2+z**2)**0.5
-    if r==0:
-        return [0,0,0]
-    theta = np.arccos(z/r)
-    (x ** 2 + y ** 2) ** 0.5
-    if x>0 and y>0:
-        phi = np.arcsin(y/)
-        return [r, theta, phi]
-
-    if x==0:
-        phi = np.arcsin(y/(x**2+y**2)**0.5)
-        return [r, theta, phi]
-    else:
-        phi = np.arcsin(y / (x ** 2 + y ** 2) ** 0.5)
-        return [r, theta, phi]
-
-    if y == 0:
-        if x > 0:
-            return [r, theta, 0]
-        else:
-            return [r, theta, np.pi]
-"""
-
-
-def orth2cyd(vec):
-    x = vec[0]
-    y = vec[1]
-    z = vec[2]
-    r = (x**2 + y**2) ** 0.5
-    theta = np.arctan2(y, x)
-    return np.array([r, theta, z])
-
-
-def rotmatrix_axis(rotaxis=None, rotangle=None, unit="rad", verbose=False):
-    """
-    The matrix of a proper rotation R by angle θ around the rotating axis
-
-    Reference
-    ---------
-    https   ://en.wikipedia.org/wiki/Rotation_matrix
-    """
-    u = np.array(rotaxis, dtype=np.float64).reshape((3))
-    u = u / (np.vdot(u, u)) ** 0.5
-    ux = np.array([0, -u[2], u[1]], [u[2], 0, -u[0]], [-u[1], u[0], 0])
-    uxu = np.outer(u, u)
-    matrixR = (
-        np.cos(rotangle) * np.identity(3)
-        + np.sin(rotangle) * ux
-        + (1 - np.cos(rotangle)) * uxu
-    )
-    return matrixR
+# def Methanoltemp2CS(
+#     temp=None,
+#     tempunit="C",
+#     CSunit="ppm",  # 'ppm' 'Hz'
+#     referfreq=1e6,  # in Hz
+# ):
+
+#     a = -23.832
+#     b = -29.46
+#     c = 403.0
+#     # temp_arr = a * CS_arr**2 + b * CS_arr + c
+#     if tempunit == "C":
+#         CSval = (-b - np.sqrt(b**2 - 4 * a * (c - temp - 273.15))) / (2 * a)
+#     elif tempunit == "K":
+#         CSval = (-b - np.sqrt(b**2 - 4 * a * (c - temp))) / (2 * a)
+#     else:
+#         raise ValueError("tempunit wrong")
+
+#     if CSunit == "ppm":
+#         pass
+#     elif CSunit == "Hz":
+#         CSval *= referfreq
+#     else:
+#         raise ValueError("CSunit wrong")
+#     return CSval
+
+
+# def MethanolChemicalShift(
+#     temprange=[0, -90],
+#     temparrnum=1000,
+#     plotxunit="C",
+#     plotxunit2="K",
+#     plotyunit="ppm",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
+#     plotyunit2="Hz",
+#     referencefreq=1.349500e6,  # default 1349500 Hz
+#     plotx2format="{:.3f}",
+#     # formatter = mticker.FuncFormatter(lambda y, pos: '{:.3f}'.format(specxaxis2))
+#     # ampunit='Phi',  #  'muV' 'muPhi' 'Phi' 'V'
+#     plotyscale="linear",  # 'log', 'linear'
+#     specxlim=[],
+#     specylim=[],
+#     top=0.9,
+#     bottom=0.1,
+#     left=0.1,
+#     right=0.93,
+#     hspace=0.4,
+#     wspace=0.295,
+#     vlinex=None,
+#     showplt_opt=True,
+#     saveplt_opt=False,
+#     saveSpecData_opt=False,
+#     save_path=None,
+#     save_msg=None,
+#     return_opt=False,
+#     verbose=False,
+# ):
+#     """
+#     # T = 403.0 - 0.491 deltanu -66.2 (10^-2 deltanu)^2
+#     175 - 330 K
+#     Calibration of Methanol Nuclear Magnetic Resonance Thermometerat Low Temperature
+#     ANALYTICAL CHEMISTRY, VOL. 42, NO. 6, MAY 1970
+#     Anthony L. Van Geet
+
+#     A. L. Van Geet, Anal. Chem., 40, 2227 (1968).
+#     Calibration of the Methanol and Glycol Nuclear Magnetic Resonance Thermometers with a Static Thermistor Probe
+#     Anthony L. Van Geet
+#     Department of Chemistry, State University of New York, Buffalo, N. Y. 14214
+
+#     https://www.versci.com/cwnmr/index.html
+#     """
+#     temp_arr = np.linspace(
+#         start=temprange[0],
+#         stop=temprange[1],
+#         num=temparrnum,
+#         endpoint=True,
+#         dtype=float,
+#     )
+#     CS_arr = Methanoltemp2CS(temp=temp_arr)
+
+#     # a = -66.2*1e-4
+#     # b = -0.491
+#     # c = 403.0
+#     plt.rc("font", size=14)
+#     fig = plt.figure(figsize=(8, 6))  #
+#     gs = gridspec.GridSpec(nrows=1, ncols=1)  #
+#     fig.subplots_adjust(
+#         left=left, top=top, right=right, bottom=bottom, wspace=wspace, hspace=hspace
+#     )
+#     CStemp_ax = fig.add_subplot(gs[0, 0])
+#     CStemp_ax.plot(temp_arr, CS_arr)
+#     CStemp_ax.scatter(temp_arr, CS_arr)
+#     CStemp_ax.set_xlabel("Temperature / $\\degree C$")
+#     CStemp_ax.set_ylabel("Chemical shift /ppm")
+#     # peakamp_ax_ylim = peakamp_ax.get_ylim()
+#     CStemp_ax.set_ylim(bottom=0, top=1.2 * (CStemp_ax.get_ylim()[1]))
+
+#     CStemp_ax2 = CStemp_ax.twiny()
+#     CStemp_ax2.set_xlabel("Temperature / K")
+#     CStemp_ax2.set_xlim(CStemp_ax.get_xlim())
+#     print(CStemp_ax.get_xlim())
+#     # apply a function formatter
+#     axisfmt_partial = partial(axisfmt_C2K, format_string="{:.0f}")
+#     formatter = mticker.FuncFormatter(axisfmt_partial)
+#     CStemp_ax2.xaxis.set_major_formatter(formatter)
+
+#     if showplt_opt:
+#         plt.show()
+#     plt.close()
+#     return 0
+
+
+# def constOne(t=None):
+#     return 1
+
+
+# def statUni2Pi(num=None, showplt=False, verbose=False):
+#     """
+#     return an array of N numbers which obeys Uniform distribution
+#     Parameters
+#     ----------
+
+#     num : int
+#     the length of return array. None by default.
+
+#     showplt : bool
+#     Whether to plot histogram of the distribution
+
+#     verbose : bool
+
+#     Examples
+#     --------
+#     >>>
+
+#     Reference
+#     ----------
+
+#     """
+#     r = uniform.rvs(loc=0, scale=2 * np.pi, size=num)
+#     if verbose:
+#         check(r)
+#     if showplt:
+#         fig = plt.figure(figsize=(4, 3), dpi=150)  #
+#         gs = gridspec.GridSpec(nrows=1, ncols=1)  #
+#         # fig.subplots_adjust(left=left_spc, top=top_spc, right=right_spc,
+#         #                     bottom=bottom_spc, wspace=xgrid_spc, hspace=ygrid_spc)
+#         # make plot for time domain signal
+#         ax = fig.add_subplot(gs[0, 0])
+#         ax.hist(
+#             r, density=False, histtype="stepfilled", alpha=0.9, range=(0, 2 * np.pi)
+#         )
+#         # ax.legend(loc='best', frameon=False)
+#         ax.set_ylabel("Count")
+#         ax.set_title("Uniform distribution [0, 2*Pi]")
+#         plt.show()
+#     return r
+
+
+# def fRayleigh(x, sigma, verbose=False):
+#     stepx = (x + abs(x)) / 2.0
+#     return stepx / sigma**2 * np.exp(-(stepx**2) / 2 / sigma**2)
+
+
+# def statRayleigh(sigma=None, num=None, showplt=False, verbose=False):
+#     """
+#     return an array of N numbers which obeys Rayleigh distribution
+
+#     Parameters
+#     ----------
+#     sigma : float
+
+#     parameter for the distribution. None by default.
+
+#     num : int
+
+#     the length of return array. None by default.
+
+#     showplt : bool
+
+#     Whether to plot histogram of the distribution
+
+#     verbose : bool
+
+#     Examples
+#     --------
+
+#     Exampl 1
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     from functioncache import *
+#     r0=statRayleigh(
+#             sigma=3,
+#             num=1000,
+#             showplt=False,
+#             verbose=False
+#         )
+#     r1=statRayleigh(
+#             sigma=3,
+#             num=1000,
+#             showplt=False,
+#             verbose=False
+#         )
+#     fig = plt.figure(dpi=150)
+#     gs = gridspec.GridSpec(nrows=1, ncols=1)
+#     # fig.subplots_adjust(top=0.88,bottom=0.11,left=0.07,right=0.99,hspace=0.2,wspace=0.2)
+#     ax = fig.add_subplot(gs[0,0])
+#     ax.hist(r0,density=False, histtype='step', label='r0', alpha=0.9)
+#     ax.hist(r1,density=False, histtype='step', label='r1', alpha=0.9)
+#     ax.hist(r0+r1,density=False, histtype='step', label='r0+r1', alpha=0.9)
+#     ax.hist(0.25*r0+0.75*r1,density=False, histtype='step', label='0.25*r0+0.75*r1', alpha=0.9)
+#     ax.legend(loc='best', frameon=True, fontsize=8)
+#     ax.set_ylabel(f'Count')
+#     ax.set_xlabel(f'Amplitude')
+#     ax.grid()
+#     plt.show()
+
+#     Example 2
+
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     from functioncache import *
+#     sigma=3
+#     lenofarray=2000
+#     r0=statRayleigh(
+#             sigma=sigma,
+#             num=lenofarray,
+#             showplt=False,
+#             verbose=False
+#         )
+#     r1=statRayleigh(
+#             sigma=sigma,
+#             num=lenofarray,
+#             showplt=False,
+#             verbose=False
+#         )
+#     rsum = np.sqrt(r0**2+r1**2)/ np.sqrt(2)
+#     g0=statGaussian(
+#             mu=0,
+#             sigma=sigma,
+#             num=lenofarray,
+#             showplt=False,
+#             verbose=False
+#         )
+#     g1=statGaussian(
+#             mu=0,
+#             sigma=sigma,
+#             num=lenofarray,
+#             showplt=False,
+#             verbose=False
+#         )
+#     g2=statGaussian(
+#             mu=0,
+#             sigma=sigma,
+#             num=lenofarray,
+#             showplt=False,
+#             verbose=False
+#         )
+#     r1 = np.sqrt(g0**2+g1**2)
+#     r2 = np.sqrt(g0**2 + g1**2 + g2**2)
+#     fig = plt.figure(dpi=150)  #figsize=(10, 4),
+#     gs = gridspec.GridSpec(nrows=1, ncols=1)  #
+#     ax = fig.add_subplot(gs[0,0])
+#     ax.hist(r0,density=True, histtype='step', label='r0', alpha=0.9)
+#     ax.hist(rsum,density=True, histtype='step', label='np.sqrt(r0**2+r1**2)', alpha=0.9)
+#     ax.hist(r1,density=True, histtype='step', label='np.sqrt(g0**2+g1**2)', alpha=0.9)
+#     ax.hist(r2,density=True, histtype='step', label='r2', alpha=0.9)
+#     ax.legend(loc='best', frameon=True, fontsize=8)
+#     ax.set_ylabel(f'Count')
+#     ax.set_xlabel(f'')
+#     ax.grid()
+#     plt.show()
+
+#     Notes
+#     -----
+#     Rayleigh distribution f(x;sigma) = x/sigma^2 * exp(-x^2/(2 sigma^2))
+
+#     Mean value: (pi/2)^0.5 sigma
+
+#     standard deviation: (2-pi/2)^0.5 sigma
+
+
+
+#     Reference
+#     ----------
+#     https://en.wikipedia.org/wiki/Rayleigh_distribution
+
+#     https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rayleigh.html
+#     """
+#     r = rayleigh.rvs(loc=0, scale=sigma, size=num)
+#     if verbose:
+#         check(r)
+#     if showplt:
+#         fig = plt.figure(figsize=(4, 3), dpi=150)  #
+#         gs = gridspec.GridSpec(nrows=1, ncols=1)  #
+#         # fig.subplots_adjust(left=left_spc, top=top_spc, right=right_spc,
+#         #                     bottom=bottom_spc, wspace=xgrid_spc, hspace=ygrid_spc)
+#         # make plot for time domain signal
+#         ax = fig.add_subplot(gs[0, 0])
+#         ax.hist(
+#             r, density=False, histtype="stepfilled", alpha=0.9, range=(0, np.amax(r))
+#         )
+#         # ax.legend(loc='best', frameon=False)
+#         ax.set_ylabel("Count")
+#         ax.set_title(f"Rayleigh distribution sigma={sigma}")
+#         plt.show()
+#     return r
+
+
+# def randomwalk2D(sigma=None, numofstep=None, num=None, showplt=False, verbose=False):
+#     """
+#     Random walk on 2D plane
+
+#     """
+#     r = rayleigh.rvs(loc=0, scale=sigma, size=num)
+#     rw2D = []
+#     for i in range(num):
+#         phase = uniform.rvs(loc=0, scale=2 * np.pi, size=numofstep)
+#         sin_arr = np.sin(phase)
+#         cos_arr = np.cos(phase)
+#         rw2D.append(np.sum(cos_arr) + 1j * np.sum(sin_arr))
+#     rw2D = sigma * np.array(rw2D, dtype=np.complex64) / np.sqrt(numofstep / 2.0)
+#     if verbose:
+#         check(rw2D)
+
+#     if showplt:
+#         fig = plt.figure(figsize=(10, 4), dpi=150)  #
+#         gs = gridspec.GridSpec(nrows=1, ncols=2)  #
+#         fig.subplots_adjust(
+#             top=0.88, bottom=0.11, left=0.07, right=0.99, hspace=0.2, wspace=0.2
+#         )
+#         # make plot for time domain signal
+#         ax = fig.add_subplot(gs[0, 0])
+#         ax.hist(
+#             r,
+#             bins=40,
+#             density=False,
+#             histtype="step",
+#             label="Rayleigh distribution",
+#             alpha=0.9,
+#             range=(0, np.amax(r)),
+#         )
+#         ax.hist(
+#             np.abs(rw2D.real),
+#             bins=40,
+#             density=False,
+#             histtype="step",
+#             label="Amplitude of 1D random walk - cos",
+#             alpha=0.9,
+#         )
+#         ax.hist(
+#             np.abs(rw2D.imag),
+#             bins=40,
+#             density=False,
+#             histtype="step",
+#             label="Amplitude of 1D random walk - sin",
+#             alpha=0.9,
+#         )
+#         ax.hist(
+#             np.abs(rw2D),
+#             bins=50,
+#             density=False,
+#             histtype="step",
+#             label="Amplitude of 2D random walk",
+#             alpha=0.9,
+#         )
+#         ax.legend(loc="best", frameon=True, fontsize=8)
+#         ax.set_ylabel("Count")
+#         ax.set_xlabel("Amplitude")
+#         # ax.set_title(f'Rayleigh distribution sigma={sigma}')
+#         ax.grid()
+
+#         ax2 = fig.add_subplot(gs[0, 1])
+#         # ax.hist(r, density=False, histtype='step', label='Rayleigh distribution', alpha=0.9, range=(0,np.amax(r)))
+#         ax2.hist(
+#             np.angle(rw2D) + np.pi,
+#             bins=40,
+#             density=False,
+#             histtype="bar",
+#             label="Phase of 2D random walk",
+#             alpha=0.9,
+#             range=(0, 2 * np.pi),
+#         )
+#         ax2.legend(loc="best", frameon=True)
+#         # ax2.set_ylabel(f'Count')
+#         ax2.set_xlabel("Phase")
+#         ax2.grid()
+
+#         plt.show()
+#     return rw2D
+
+
+# def statGaussian(mu=None, sigma=None, num=None, showplt=False, verbose=False):
+#     """ """
+#     r = norm.rvs(loc=mu, scale=sigma, size=num, random_state=None)
+#     if verbose:
+#         check(r)
+#     if showplt:
+#         fig = plt.figure(figsize=(4, 3), dpi=150)  #
+#         gs = gridspec.GridSpec(nrows=1, ncols=1)  #
+#         # fig.subplots_adjust(left=left_spc, top=top_spc, right=right_spc,
+#         #                     bottom=bottom_spc, wspace=xgrid_spc, hspace=ygrid_spc)
+#         # make plot for time domain signal
+#         ax = fig.add_subplot(gs[0, 0])
+#         ax.hist(r, density=False, histtype="stepfilled", alpha=0.9)
+#         # ax.legend(loc='best', frameon=False)
+#         ax.set_ylabel("Count")
+#         ax.set_title(f"Gaussian distribution sigma={sigma}")
+#         plt.show()
+#     return r
+
+
+# def sph2orth1d(vec=None):
+#     orth = np.zeros(3)
+#     orth[0] = vec[0] * np.sin(vec[1]) * np.cos(vec[2])
+#     orth[1] = vec[0] * np.sin(vec[1]) * np.sin(vec[2])
+#     orth[2] = vec[0] * np.cos(vec[1])
+#     return orth
+
+
+# def sph2orth(vec=None):
+#     if len(vec.shape) == 1:
+#         return sph2orth1d(vec)
+#     elif len(vec.shape) == 2:
+#         xyz = np.zeros(np.shape(vec))
+#         xyz[:, 0] = vec[:, 0] * np.sin(vec[:, 1]) * np.cos(vec[:, 2])
+#         xyz[:, 1] = vec[:, 0] * np.sin(vec[:, 1]) * np.sin(vec[:, 2])
+#         xyz[:, 2] = vec[:, 0] * np.cos(vec[:, 1])
+#         return xyz
+#     else:
+#         raise ValueError("len(vec.shape)<=0 or len(vec.shape)>=3")
+
+
+# def Rad2Deg(vec=None):
+#     r = vec
+#     r[:, 1:] *= 180.0 / np.pi
+#     return r
+
+
+# def Rad2Deg1d(vec=None):
+#     r = vec
+#     r[1:] *= 180.0 / np.pi
+#     return r
+
+
+# """
+# def orth2sph(vec):
+#     x=vec[0]
+#     y=vec[1]
+#     z=vec[2]
+#     r=(x**2+y**2+z**2)**0.5
+#     if r==0:
+#         return [0,0,0]
+#     theta = np.arccos(z/r)
+#     (x ** 2 + y ** 2) ** 0.5
+#     if x>0 and y>0:
+#         phi = np.arcsin(y/)
+#         return [r, theta, phi]
+
+#     if x==0:
+#         phi = np.arcsin(y/(x**2+y**2)**0.5)
+#         return [r, theta, phi]
+#     else:
+#         phi = np.arcsin(y / (x ** 2 + y ** 2) ** 0.5)
+#         return [r, theta, phi]
+
+#     if y == 0:
+#         if x > 0:
+#             return [r, theta, 0]
+#         else:
+#             return [r, theta, np.pi]
+# """
+
+
+# def orth2cyd(vec):
+#     x = vec[0]
+#     y = vec[1]
+#     z = vec[2]
+#     r = (x**2 + y**2) ** 0.5
+#     theta = np.arctan2(y, x)
+#     return np.array([r, theta, z])
+
+
+# def rotmatrix_axis(rotaxis=None, rotangle=None, unit="rad", verbose=False):
+#     """
+#     The matrix of a proper rotation R by angle θ around the rotating axis
+
+#     Reference
+#     ---------
+#     https   ://en.wikipedia.org/wiki/Rotation_matrix
+#     """
+#     u = np.array(rotaxis, dtype=np.float64).reshape((3))
+#     u = u / (np.vdot(u, u)) ** 0.5
+#     ux = np.array([0, -u[2], u[1]], [u[2], 0, -u[0]], [-u[1], u[0], 0])
+#     uxu = np.outer(u, u)
+#     matrixR = (
+#         np.cos(rotangle) * np.identity(3)
+#         + np.sin(rotangle) * ux
+#         + (1 - np.cos(rotangle)) * uxu
+#     )
+#     return matrixR
 
 
 def Npole2station(
@@ -2488,8 +2491,8 @@ def Init_3020sphere(ax, verbose=False):
         shrinkB=0,
     )
     ax.add_artist(a)
-    ax.text(0, -0.85, 1.15, "$\mathbf{B}_0$", color="black")
-    # ax.text(1, 0.85, 1.25, '$\mathbf{M}$', color='g')
+    ax.text(0, -0.85, 1.15, "$\\mathbf{B}_0$", color="black")
+    # ax.text(1, 0.85, 1.25, '$\\mathbf{M}$', color='g')
 
     # draw magnetization vectors
     # timestamp = np.linspace(start=0, stop=1, num=1000)
@@ -2613,287 +2616,287 @@ def Add_vector(
     #     )
 
 
-def DrawMethanol(
-    ax,
-    fontsize,
-    textwidth,
-    textheight,
-    Cposx,
-    Cposy,
-    vcorr,
-):
-    # testtext = ax.text(x=0, y=0, s='$\\mathrm{C}$', ha='right', va='top')
-    # x, y = testtext.get_va(), testtext.get_bbox_patch()
-    # check((x, y))
-    bondsize = 1 * textwidth
+# def DrawMethanol(
+#     ax,
+#     fontsize,
+#     textwidth,
+#     textheight,
+#     Cposx,
+#     Cposy,
+#     vcorr,
+# ):
+#     # testtext = ax.text(x=0, y=0, s='$\\mathrm{C}$', ha='right', va='top')
+#     # x, y = testtext.get_va(), testtext.get_bbox_patch()
+#     # check((x, y))
+#     bondsize = 1 * textwidth
 
-    gap = 0.08 * textwidth
-    ax.text(x=Cposx, y=Cposy, s="$\\mathrm{C}$", ha="center", va="center_baseline")
-    # H-C
-    ax.text(
-        x=Cposx - 2 * gap - bondsize - 0.5 * textwidth,
-        y=Cposy,
-        s="$\\mathrm{H}$",
-        ha="right",
-        va="center_baseline",
-        color="tab:brown",
-    )
-    # H
-    # |
-    # C
-    ax.text(
-        x=Cposx,
-        y=Cposy + vcorr * (2 * gap + bondsize + 0.5 * textheight),
-        s="$\\mathrm{H}$",
-        ha="center",
-        va="bottom",
-        color="tab:brown",
-    )
-    # C
-    # |
-    # H
-    ax.text(
-        x=Cposx,
-        y=Cposy - vcorr * (2 * gap + bondsize + 0.5 * textheight),
-        s="$\\mathrm{H}$",
-        ha="center",
-        va="top",
-        color="tab:brown",
-    )
-    # C-O
-    ax.text(
-        x=Cposx + 3 * gap + bondsize + 0.5 * textwidth,
-        y=Cposy,
-        s="$\\mathrm{O}$",
-        ha="left",
-        va="center_baseline",
-    )
-    # O-H
-    ax.text(
-        x=Cposx
-        + 3 * gap
-        + bondsize
-        + 1.5 * textwidth
-        + bondsize * np.cos(72 * np.pi / 180),
-        y=Cposy + vcorr * bondsize * np.sin(72 * np.pi / 180),
-        s="$\\mathrm{H}$",
-        ha="left",
-        va="bottom",
-        color="tab:purple",
-    )
+#     gap = 0.08 * textwidth
+#     ax.text(x=Cposx, y=Cposy, s="$\\mathrm{C}$", ha="center", va="center_baseline")
+#     # H-C
+#     ax.text(
+#         x=Cposx - 2 * gap - bondsize - 0.5 * textwidth,
+#         y=Cposy,
+#         s="$\\mathrm{H}$",
+#         ha="right",
+#         va="center_baseline",
+#         color="tab:brown",
+#     )
+#     # H
+#     # |
+#     # C
+#     ax.text(
+#         x=Cposx,
+#         y=Cposy + vcorr * (2 * gap + bondsize + 0.5 * textheight),
+#         s="$\\mathrm{H}$",
+#         ha="center",
+#         va="bottom",
+#         color="tab:brown",
+#     )
+#     # C
+#     # |
+#     # H
+#     ax.text(
+#         x=Cposx,
+#         y=Cposy - vcorr * (2 * gap + bondsize + 0.5 * textheight),
+#         s="$\\mathrm{H}$",
+#         ha="center",
+#         va="top",
+#         color="tab:brown",
+#     )
+#     # C-O
+#     ax.text(
+#         x=Cposx + 3 * gap + bondsize + 0.5 * textwidth,
+#         y=Cposy,
+#         s="$\\mathrm{O}$",
+#         ha="left",
+#         va="center_baseline",
+#     )
+#     # O-H
+#     ax.text(
+#         x=Cposx
+#         + 3 * gap
+#         + bondsize
+#         + 1.5 * textwidth
+#         + bondsize * np.cos(72 * np.pi / 180),
+#         y=Cposy + vcorr * bondsize * np.sin(72 * np.pi / 180),
+#         s="$\\mathrm{H}$",
+#         ha="left",
+#         va="bottom",
+#         color="tab:purple",
+#     )
 
-    # pt_list=[[]]
-    # H-C
-    ax.plot(
-        [Cposx - gap - 0.5 * textwidth, Cposx - gap - 0.5 * textwidth - bondsize],
-        [Cposy, Cposy],
-        color="k",
-        lw=1,
-    )
+#     # pt_list=[[]]
+#     # H-C
+#     ax.plot(
+#         [Cposx - gap - 0.5 * textwidth, Cposx - gap - 0.5 * textwidth - bondsize],
+#         [Cposy, Cposy],
+#         color="k",
+#         lw=1,
+#     )
 
-    # C-O
-    ax.plot(
-        [Cposx + gap + 0.5 * textwidth, Cposx + gap + 0.5 * textwidth + bondsize],
-        [Cposy, Cposy],
-        color="k",
-        lw=1,
-    )
-    # H
-    # |
-    # C
-    ax.plot(
-        [Cposx, Cposx],
-        [
-            Cposy + vcorr * (gap + 0.5 * textheight),
-            Cposy + vcorr * (gap + 0.5 * textheight + bondsize),
-        ],
-        color="k",
-        lw=1,
-    )
-    # C
-    # |
-    # H
-    ax.plot(
-        [Cposx, Cposx],
-        [
-            Cposy - vcorr * (gap + 0.5 * textheight),
-            Cposy - vcorr * (gap + 0.5 * textheight + bondsize),
-        ],
-        color="k",
-        lw=1,
-    )
-    # O-H
-    ax.plot(
-        [
-            Cposx + 3 * gap + 1.4 * textwidth + bondsize,
-            Cposx
-            + 3 * gap
-            + 1.5 * textwidth
-            + bondsize * (1 + np.cos(72 * np.pi / 180)),
-        ],
-        [Cposy, Cposy + vcorr * bondsize * np.sin(72 * np.pi / 180)],
-        color="k",
-        lw=1,
-    )
-
-
-def AnalyzeHGTrzBrBz(
-    file=None,
-    BDR_H=None,
-    BDR_R=None,
-    SMP_H=None,
-    SMP_R=None,
-    SMP_xc=None,
-    SMP_yc=None,
-    SMP_zc=None,
-    tol=1e-2,
-    plt_opt=False,
-    verbose=False,
-):
-    ir = 0
-    iz = 1
-    iBr = 2
-    iBz = 3
-
-    # T2G = 1e4
-    # Nwinding = 9
-    T2G = 1e4
-    Nwinding = 1
-    mf = np.loadtxt(file, skiprows=9)  # [shape=(20081, 6)]
-    if verbose:
-        check(mf)
-
-    if BDR_H is None:
-        BDR_H = abs(np.amax(mf[:, iz]) - np.amin(mf[:, iz]))
-    if verbose:
-        check(BDR_H)
-
-    # BDR_R = 0
-    if SMP_H is None or SMP_R is None:
-        raise ValueError("SMP_H is None or SMP_R is None")
-
-    if SMP_xc is None:
-        SMP_xc = 0
-    if SMP_yc is None:
-        SMP_yc = 0
-    if SMP_zc is None:
-        SMP_zc = BDR_H / 2
-
-    SMP_mf = []  # the magnetic field in the sample
-    # SMP_wei = []
-    for i, r in enumerate(mf[:, ir]):
-        r = mf[i, ir]
-        z = mf[i, iz]
-        if (r) ** 2 < (1 + tol) * SMP_R**2 and abs(z - SMP_zc) < (1 + tol) * SMP_H:
-            SMP_mf.append(mf[i, :])
-            # SMP_wei.append()
-
-    SMP_mf_arr = np.array(SMP_mf)  #  [shape=(150, 6)]
-    del SMP_mf
-    # check(SMP_mf_arr)
-    if plt_opt:
-        plt.rc("font", size=12)
-        # plt.rcParams["font.family"] = "serif"
-        # plt.rcParams["font.serif"] = ["Times New Roman"]
-        plt.rcParams["font.family"] = "Times New Roman"
-        plt.rcParams["mathtext.fontset"] = "cm"  # 'dejavuserif'
-        fig = plt.figure(figsize=(8, 6), dpi=150)  #
-        gs = gridspec.GridSpec(nrows=2, ncols=2)  #
-
-        nbin = 200
-        ax00 = fig.add_subplot(gs[0, 0])
-        # h, edges = np.histogram(T2G * Nwinding * SMP_mf_arr[:, iBr], \
-        #                         weights=SMP_mf_arr[:, ir], bins=nbin)
-        h, edges = np.histogram(T2G * Nwinding * SMP_mf_arr[:, iBr], bins=nbin)
-        ax00.stairs(h, edges, label="mf.Br")
-        ax00.set_xlabel("Br [G]")
-        del h, edges
-
-        ax01 = fig.add_subplot(gs[0, 1])
-        # h, edges = np.histogram(T2G * Nwinding * SMP_mf_arr[:, iBz], \
-        #                         weights=SMP_mf_arr[:, iz], bins=nbin)
-        h, edges = np.histogram(T2G * Nwinding * SMP_mf_arr[:, iBz], bins=nbin)
-        ax01.stairs(h, edges, label="mf.Bz")
-        ax01.set_xlabel("Bz [G]")
-        del h, edges
-
-        # ax10 = fig.add_subplot(gs[1, 0])
-        # h, edges = np.histogram(SMP_mf_arr[:, iBz], weights=SMP_mf_arr[:, iz])
-        # ax10.stairs(h, edges, label='mf.B')
-        # del h, edges
-
-        # ax00.legend()
-        # ax01.legend()
-        plt.show()
-
-    return
+#     # C-O
+#     ax.plot(
+#         [Cposx + gap + 0.5 * textwidth, Cposx + gap + 0.5 * textwidth + bondsize],
+#         [Cposy, Cposy],
+#         color="k",
+#         lw=1,
+#     )
+#     # H
+#     # |
+#     # C
+#     ax.plot(
+#         [Cposx, Cposx],
+#         [
+#             Cposy + vcorr * (gap + 0.5 * textheight),
+#             Cposy + vcorr * (gap + 0.5 * textheight + bondsize),
+#         ],
+#         color="k",
+#         lw=1,
+#     )
+#     # C
+#     # |
+#     # H
+#     ax.plot(
+#         [Cposx, Cposx],
+#         [
+#             Cposy - vcorr * (gap + 0.5 * textheight),
+#             Cposy - vcorr * (gap + 0.5 * textheight + bondsize),
+#         ],
+#         color="k",
+#         lw=1,
+#     )
+#     # O-H
+#     ax.plot(
+#         [
+#             Cposx + 3 * gap + 1.4 * textwidth + bondsize,
+#             Cposx
+#             + 3 * gap
+#             + 1.5 * textwidth
+#             + bondsize * (1 + np.cos(72 * np.pi / 180)),
+#         ],
+#         [Cposy, Cposy + vcorr * bondsize * np.sin(72 * np.pi / 180)],
+#         color="k",
+#         lw=1,
+#     )
 
 
-def AnalyzeHGTxyzBxByBz(
-    file=None,
-    BDR_H=None,
-    BDR_R=None,
-    SMP_H=None,
-    SMP_R=None,
-    SMP_xc=None,
-    SMP_yc=None,
-    SMP_zc=None,
-    tol=1e-2,
-    plt_opt=False,
-    verbose=False,
-):
-    mf = np.loadtxt(file, skiprows=9)  # [shape=(20081, 6)]
-    # check(mf)
-    if BDR_H is None:
-        BDR_H = abs(np.amax(mf[:, 2]) - np.amin(mf[:, 2]))
-    check(BDR_H)
+# def AnalyzeHGTrzBrBz(
+#     file=None,
+#     BDR_H=None,
+#     BDR_R=None,
+#     SMP_H=None,
+#     SMP_R=None,
+#     SMP_xc=None,
+#     SMP_yc=None,
+#     SMP_zc=None,
+#     tol=1e-2,
+#     plt_opt=False,
+#     verbose=False,
+# ):
+#     ir = 0
+#     iz = 1
+#     iBr = 2
+#     iBz = 3
 
-    # BDR_R = 0
-    if SMP_H is None or SMP_R is None:
-        raise ValueError("SMP_H is None or SMP_R is None")
+#     # T2G = 1e4
+#     # Nwinding = 9
+#     T2G = 1e4
+#     Nwinding = 1
+#     mf = np.loadtxt(file, skiprows=9)  # [shape=(20081, 6)]
+#     if verbose:
+#         check(mf)
 
-    if SMP_xc is None:
-        SMP_xc = 0
-    if SMP_yc is None:
-        SMP_yc = 0
-    if SMP_zc is None:
-        SMP_zc = BDR_H / 2
+#     if BDR_H is None:
+#         BDR_H = abs(np.amax(mf[:, iz]) - np.amin(mf[:, iz]))
+#     if verbose:
+#         check(BDR_H)
 
-    SMP_mf = []
+#     # BDR_R = 0
+#     if SMP_H is None or SMP_R is None:
+#         raise ValueError("SMP_H is None or SMP_R is None")
 
-    for i, x in enumerate(mf[:, 0]):
-        y = mf[i, 1]
-        z = mf[i, 2]
-        if (x - SMP_xc) ** 2 + (y - SMP_yc) ** 2 < (1 + tol) * SMP_R**2 and abs(
-            z - SMP_zc
-        ) < (1 + tol) * SMP_H:
-            SMP_mf.append(mf[i, :])
+#     if SMP_xc is None:
+#         SMP_xc = 0
+#     if SMP_yc is None:
+#         SMP_yc = 0
+#     if SMP_zc is None:
+#         SMP_zc = BDR_H / 2
 
-    SMP_mf_arr = np.array(SMP_mf)  #  [shape=(150, 6)]
-    del SMP_mf
-    # check(SMP_mf_arr)
-    if plt_opt:
-        plt.rc("font", size=12)
-        # plt.rcParams["font.family"] = "serif"
-        # plt.rcParams["font.serif"] = ["Times New Roman"]
-        plt.rcParams["font.family"] = "Times New Roman"
-        plt.rcParams["mathtext.fontset"] = "cm"  # 'dejavuserif'
-        fig = plt.figure(figsize=(8, 6), dpi=150)  #
-        gs = gridspec.GridSpec(nrows=2, ncols=2)  #
+#     SMP_mf = []  # the magnetic field in the sample
+#     # SMP_wei = []
+#     for i, r in enumerate(mf[:, ir]):
+#         r = mf[i, ir]
+#         z = mf[i, iz]
+#         if (r) ** 2 < (1 + tol) * SMP_R**2 and abs(z - SMP_zc) < (1 + tol) * SMP_H:
+#             SMP_mf.append(mf[i, :])
+#             # SMP_wei.append()
 
-        ax00 = fig.add_subplot(gs[0, 0])
-        h, edges = np.histogram(SMP_mf_arr[:, 3])
-        ax00.stairs(h, edges, label="mf.Bx")
-        del h, edges
+#     SMP_mf_arr = np.array(SMP_mf)  #  [shape=(150, 6)]
+#     del SMP_mf
+#     # check(SMP_mf_arr)
+#     if plt_opt:
+#         plt.rc("font", size=12)
+#         # plt.rcParams["font.family"] = "serif"
+#         # plt.rcParams["font.serif"] = ["Times New Roman"]
+#         plt.rcParams["font.family"] = "Times New Roman"
+#         plt.rcParams["mathtext.fontset"] = "cm"  # 'dejavuserif'
+#         fig = plt.figure(figsize=(8, 6), dpi=150)  #
+#         gs = gridspec.GridSpec(nrows=2, ncols=2)  #
 
-        ax10 = fig.add_subplot(gs[1, 0])
-        h, edges = np.histogram(SMP_mf_arr[:, 5])
-        ax10.stairs(h, edges, label="mf.Bz")
-        del h, edges
+#         nbin = 200
+#         ax00 = fig.add_subplot(gs[0, 0])
+#         # h, edges = np.histogram(T2G * Nwinding * SMP_mf_arr[:, iBr], \
+#         #                         weights=SMP_mf_arr[:, ir], bins=nbin)
+#         h, edges = np.histogram(T2G * Nwinding * SMP_mf_arr[:, iBr], bins=nbin)
+#         ax00.stairs(h, edges, label="mf.Br")
+#         ax00.set_xlabel("Br [G]")
+#         del h, edges
 
-        plt.show()
+#         ax01 = fig.add_subplot(gs[0, 1])
+#         # h, edges = np.histogram(T2G * Nwinding * SMP_mf_arr[:, iBz], \
+#         #                         weights=SMP_mf_arr[:, iz], bins=nbin)
+#         h, edges = np.histogram(T2G * Nwinding * SMP_mf_arr[:, iBz], bins=nbin)
+#         ax01.stairs(h, edges, label="mf.Bz")
+#         ax01.set_xlabel("Bz [G]")
+#         del h, edges
 
-    return
+#         # ax10 = fig.add_subplot(gs[1, 0])
+#         # h, edges = np.histogram(SMP_mf_arr[:, iBz], weights=SMP_mf_arr[:, iz])
+#         # ax10.stairs(h, edges, label='mf.B')
+#         # del h, edges
+
+#         # ax00.legend()
+#         # ax01.legend()
+#         plt.show()
+
+#     return
+
+
+# def AnalyzeHGTxyzBxByBz(
+#     file=None,
+#     BDR_H=None,
+#     BDR_R=None,
+#     SMP_H=None,
+#     SMP_R=None,
+#     SMP_xc=None,
+#     SMP_yc=None,
+#     SMP_zc=None,
+#     tol=1e-2,
+#     plt_opt=False,
+#     verbose=False,
+# ):
+#     mf = np.loadtxt(file, skiprows=9)  # [shape=(20081, 6)]
+#     # check(mf)
+#     if BDR_H is None:
+#         BDR_H = abs(np.amax(mf[:, 2]) - np.amin(mf[:, 2]))
+#     check(BDR_H)
+
+#     # BDR_R = 0
+#     if SMP_H is None or SMP_R is None:
+#         raise ValueError("SMP_H is None or SMP_R is None")
+
+#     if SMP_xc is None:
+#         SMP_xc = 0
+#     if SMP_yc is None:
+#         SMP_yc = 0
+#     if SMP_zc is None:
+#         SMP_zc = BDR_H / 2
+
+#     SMP_mf = []
+
+#     for i, x in enumerate(mf[:, 0]):
+#         y = mf[i, 1]
+#         z = mf[i, 2]
+#         if (x - SMP_xc) ** 2 + (y - SMP_yc) ** 2 < (1 + tol) * SMP_R**2 and abs(
+#             z - SMP_zc
+#         ) < (1 + tol) * SMP_H:
+#             SMP_mf.append(mf[i, :])
+
+#     SMP_mf_arr = np.array(SMP_mf)  #  [shape=(150, 6)]
+#     del SMP_mf
+#     # check(SMP_mf_arr)
+#     if plt_opt:
+#         plt.rc("font", size=12)
+#         # plt.rcParams["font.family"] = "serif"
+#         # plt.rcParams["font.serif"] = ["Times New Roman"]
+#         plt.rcParams["font.family"] = "Times New Roman"
+#         plt.rcParams["mathtext.fontset"] = "cm"  # 'dejavuserif'
+#         fig = plt.figure(figsize=(8, 6), dpi=150)  #
+#         gs = gridspec.GridSpec(nrows=2, ncols=2)  #
+
+#         ax00 = fig.add_subplot(gs[0, 0])
+#         h, edges = np.histogram(SMP_mf_arr[:, 3])
+#         ax00.stairs(h, edges, label="mf.Bx")
+#         del h, edges
+
+#         ax10 = fig.add_subplot(gs[1, 0])
+#         h, edges = np.histogram(SMP_mf_arr[:, 5])
+#         ax10.stairs(h, edges, label="mf.Bz")
+#         del h, edges
+
+#         plt.show()
+
+#     return
 
 
 def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
@@ -3097,251 +3100,251 @@ def axion_lineshape(v_0, v_lab, nu_a, nu, case="non-grad", alpha=0.0):
 #     return v_ALP, v_ALP_perp, alpha_ALP
 
 
-def unit_vector(vector):
-    """Returns the unit vector of the vector."""
-    return vector / np.linalg.norm(vector)
+# def unit_vector(vector):
+#     """Returns the unit vector of the vector."""
+#     return vector / np.linalg.norm(vector)
 
 
-def angle_between(v1, v2):
-    """Returns the angle in radians between vectors 'v1' and 'v2'::
+# def angle_between(v1, v2):
+#     """Returns the angle in radians between vectors 'v1' and 'v2'::
 
-    >>> angle_between((1, 0, 0), (0, 1, 0))
-    1.5707963267948966
-    >>> angle_between((1, 0, 0), (1, 0, 0))
-    0.0
-    >>> angle_between((1, 0, 0), (-1, 0, 0))
-    3.141592653589793
-    """
-    v1_u = unit_vector(v1)
-    v2_u = unit_vector(v2)
-    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
-
-
-def extract_number(s):
-    return int("".join(filter(str.isdigit, s)))
+#     >>> angle_between((1, 0, 0), (0, 1, 0))
+#     1.5707963267948966
+#     >>> angle_between((1, 0, 0), (1, 0, 0))
+#     0.0
+#     >>> angle_between((1, 0, 0), (-1, 0, 0))
+#     3.141592653589793
+#     """
+#     v1_u = unit_vector(v1)
+#     v2_u = unit_vector(v2)
+#     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 
-def get_random_color():
-    return (random.random(), random.random(), random.random())
+# def extract_number(s):
+#     return int("".join(filter(str.isdigit, s)))
 
 
-# for histogram
-def is_non_empty(entry):
-    """
-    Recursively check if an entry (element or nested array) is non-empty.
-    """
-    if isinstance(entry, np.ndarray):
-        return np.any([is_non_empty(sub_entry) for sub_entry in entry])
-    elif entry is not None:
-        return True
-    else:
-        return False
+# def get_random_color():
+#     return (random.random(), random.random(), random.random())
 
 
-def filter_non_empty(entry):
-    """
-    Recursively filter non-empty entries from the nested array.
-    """
-    if isinstance(entry, np.ndarray):
-        return np.array(
-            [
-                filter_non_empty(sub_entry)
-                for sub_entry in entry
-                if is_non_empty(sub_entry)
-            ]
-        )
-    elif entry is not None:
-        return entry
-    else:
-        return None
+# # for histogram
+# def is_non_empty(entry):
+#     """
+#     Recursively check if an entry (element or nested array) is non-empty.
+#     """
+#     if isinstance(entry, np.ndarray):
+#         return np.any([is_non_empty(sub_entry) for sub_entry in entry])
+#     elif entry is not None:
+#         return True
+#     else:
+#         return False
 
 
-def merge_peak_bins(vals, threshold):
-    # Sort values and keep track of original indices
-    indexed_values = sorted((value, index) for index, value in enumerate(vals))
-
-    merged_values = []
-    merged_indices = []
-
-    i = 0
-    while i < len(indexed_values):
-        current_value, current_index = indexed_values[i]
-        next_index = i + 1
-        to_merge = [current_value]
-        original_indices = [current_index]
-
-        # Find all values within the threshold
-        while (
-            next_index < len(indexed_values)
-            and indexed_values[next_index][0] - current_value < threshold
-        ):
-            next_value, next_index_value = indexed_values[next_index]
-            to_merge.append(next_value)
-            original_indices.append(next_index_value)
-            next_index += 1
-
-        # Keep the highest value from the merged values
-        max_value = max(to_merge)
-        merged_values.append(max_value)
-        merged_indices.append(original_indices[to_merge.index(max_value)])
-
-        # Move the index to the next group of values
-        i = next_index
-
-    return merged_values, merged_indices
+# def filter_non_empty(entry):
+#     """
+#     Recursively filter non-empty entries from the nested array.
+#     """
+#     if isinstance(entry, np.ndarray):
+#         return np.array(
+#             [
+#                 filter_non_empty(sub_entry)
+#                 for sub_entry in entry
+#                 if is_non_empty(sub_entry)
+#             ]
+#         )
+#     elif entry is not None:
+#         return entry
+#     else:
+#         return None
 
 
-def merge_close_entries(floats, threshold):
-    sorted_floats = sorted(floats)
-    filtered_floats = []
-    current_max = sorted_floats[0]
+# def merge_peak_bins(vals, threshold):
+#     # Sort values and keep track of original indices
+#     indexed_values = sorted((value, index) for index, value in enumerate(vals))
 
-    for value in sorted_floats:
-        if value - current_max > threshold:
-            # If the current value is too far from the current max, update the max and add it to the filtered list
-            filtered_floats.append(value)
-            current_max = value
-        elif value == current_max:
-            # If the value is equal to the current max, just skip it
-            continue
-        else:
-            # If the value is close to the current max, skip it
-            continue
-    filtered_floats.append(current_max)
-    return filtered_floats
+#     merged_values = []
+#     merged_indices = []
 
+#     i = 0
+#     while i < len(indexed_values):
+#         current_value, current_index = indexed_values[i]
+#         next_index = i + 1
+#         to_merge = [current_value]
+#         original_indices = [current_index]
 
-def merge_close_entries2(floats, threshold):
+#         # Find all values within the threshold
+#         while (
+#             next_index < len(indexed_values)
+#             and indexed_values[next_index][0] - current_value < threshold
+#         ):
+#             next_value, next_index_value = indexed_values[next_index]
+#             to_merge.append(next_value)
+#             original_indices.append(next_index_value)
+#             next_index += 1
 
-    merged_floats = []
-    sorted_floats = sorted(floats)
-    try:
-        current_max = np.max(sorted_floats)
-    except ValueError:
-        print("empty candidate list - cannot merge!")
-        return merged_floats
-    merged_floats.append(current_max)
-    for value in sorted_floats:
-        if np.abs(current_max - value) > threshold:
-            merged_floats.append(value)
-            current_max = value
-    return merged_floats
+#         # Keep the highest value from the merged values
+#         max_value = max(to_merge)
+#         merged_values.append(max_value)
+#         merged_indices.append(original_indices[to_merge.index(max_value)])
+
+#         # Move the index to the next group of values
+#         i = next_index
+
+#     return merged_values, merged_indices
 
 
-def read_double_precision_floats(file_path):
-    doubles = []
+# def merge_close_entries(floats, threshold):
+#     sorted_floats = sorted(floats)
+#     filtered_floats = []
+#     current_max = sorted_floats[0]
 
-    with open(file_path, "rb") as bin_file:
-        while True:
-            # Read 8 bytes (size of a double-precision float)
-            bytes_read = bin_file.read(8)
-            if not bytes_read:
-                break  # End of file
-
-            # Unpack the bytes into a double-precision float
-            # double_value = struct.unpack('d', bytes_read)[0]
-            # doubles.append(double_value)
-
-    return doubles
-
-
-def find_consistent_values(fCNDs, margin):
-    consistent_set = []
-
-    for value in fCNDs[0]:
-        set_of_inds = [0]
-        set_of_vals = [value]
-        consistent = True
-        for i in range(1, len(fCNDs)):
-            found = False
-            for other_value in fCNDs[i]:
-                if abs(value - other_value) <= margin:
-                    found = True
-                    set_of_vals.append(other_value)
-                    set_of_inds.append(i)
-                    break
-            if not found:
-                consistent = False
-                break
-        if consistent:
-            consistent_set.append((set_of_vals, set_of_inds))
-
-    return consistent_set
+#     for value in sorted_floats:
+#         if value - current_max > threshold:
+#             # If the current value is too far from the current max, update the max and add it to the filtered list
+#             filtered_floats.append(value)
+#             current_max = value
+#         elif value == current_max:
+#             # If the value is equal to the current max, just skip it
+#             continue
+#         else:
+#             # If the value is close to the current max, skip it
+#             continue
+#     filtered_floats.append(current_max)
+#     return filtered_floats
 
 
-def is_within_margin(value, sublist, margin):
-    return any(abs(value - x) <= margin for x in sublist)
+# def merge_close_entries2(floats, threshold):
+
+#     merged_floats = []
+#     sorted_floats = sorted(floats)
+#     try:
+#         current_max = np.max(sorted_floats)
+#     except ValueError:
+#         print("empty candidate list - cannot merge!")
+#         return merged_floats
+#     merged_floats.append(current_max)
+#     for value in sorted_floats:
+#         if np.abs(current_max - value) > threshold:
+#             merged_floats.append(value)
+#             current_max = value
+#     return merged_floats
 
 
-def ReturnNMRdata(basepath, scanname, index):
+# def read_double_precision_floats(file_path):
+#     doubles = []
 
-    if "20221223" in scanname:
-        logfile = rf"{basepath}/{scanname}/OnePulse analysis/fitResults.txt"  # Dec 23
-        errfile = rf"{basepath}/{scanname}/OnePulse analysis/fitUncertainties.txt"
-    elif "20221214" in scanname:
-        logfile = rf"{basepath}/{scanname}/1Pulse data/fitResults.txt"  # Dec 14
-        errfile = rf"{basepath}/{scanname}/1Pulse data/fitUncertainties.txt"
-    Log = np.genfromtxt(
-        logfile,
-        unpack=True,
-        delimiter=" ",
-        skip_header=0,
-        filling_values=0,
-        invalid_raise=False,
-    )
-    errLog = np.genfromtxt(
-        errfile,
-        unpack=True,
-        delimiter=" ",
-        skip_header=0,
-        filling_values=0,
-        invalid_raise=False,
-    )
+#     with open(file_path, "rb") as bin_file:
+#         while True:
+#             # Read 8 bytes (size of a double-precision float)
+#             bytes_read = bin_file.read(8)
+#             if not bytes_read:
+#                 break  # End of file
 
-    # get larmor frequency from fit to NMR signal peak of 1Pulse measurement
-    FLarmor = 0
-    if Log[0].size < 2:
-        FLarmor = Log[0]
-        FLarmor_err = errLog[0]
-    else:
-        FLarmor = Log[0][index]
-        FLarmor_err = errLog[0][index]
+#             # Unpack the bytes into a double-precision float
+#             # double_value = struct.unpack('d', bytes_read)[0]
+#             # doubles.append(double_value)
 
-    # get linewidth of NMR signal
-    FWHM_n = 0
-    if Log[1].size < 2:
-        FWHM_n = Log[1]
-        FWHM_n_err = errLog[1]
-    else:
-        FWHM_n = Log[1][index]
-        FWHM_n_err = errLog[1][index]
-
-    # get measured flux inside SQUID during the time of the pi/2 pulse
-    area = 0
-    if Log[2].size < 2:
-        area = Log[2]
-        area_err = errLog[2]
-    else:
-        area = Log[2][index]
-        area_err = errLog[2][index]
-    # check(area)
-
-    return FLarmor, FWHM_n, area, FLarmor_err, FWHM_n_err, area_err
+#     return doubles
 
 
-def GetDateTimeSimple(year, month, day, time_hms, return_as_int=False):
-    datetime_obj = datetime.strptime(
-        f"{year}-{month:02}-{day:02} {time_hms}", "%Y-%m-%d %H:%M:%S"
-    )
-    hour = datetime_obj.hour
-    minute = datetime_obj.minute
-    second = datetime_obj.second
-    if return_as_int:  # for easy writing into params text file
-        return math.floor(
-            float(f"{year}{month}{day}{hour:02d}{minute:02d}{second:02d}")
-        )
-    else:
-        return datetime_obj
+# def find_consistent_values(fCNDs, margin):
+#     consistent_set = []
+
+#     for value in fCNDs[0]:
+#         set_of_inds = [0]
+#         set_of_vals = [value]
+#         consistent = True
+#         for i in range(1, len(fCNDs)):
+#             found = False
+#             for other_value in fCNDs[i]:
+#                 if abs(value - other_value) <= margin:
+#                     found = True
+#                     set_of_vals.append(other_value)
+#                     set_of_inds.append(i)
+#                     break
+#             if not found:
+#                 consistent = False
+#                 break
+#         if consistent:
+#             consistent_set.append((set_of_vals, set_of_inds))
+
+#     return consistent_set
+
+
+# def is_within_margin(value, sublist, margin):
+#     return any(abs(value - x) <= margin for x in sublist)
+
+
+# def ReturnNMRdata(basepath, scanname, index):
+
+#     if "20221223" in scanname:
+#         logfile = rf"{basepath}/{scanname}/OnePulse analysis/fitResults.txt"  # Dec 23
+#         errfile = rf"{basepath}/{scanname}/OnePulse analysis/fitUncertainties.txt"
+#     elif "20221214" in scanname:
+#         logfile = rf"{basepath}/{scanname}/1Pulse data/fitResults.txt"  # Dec 14
+#         errfile = rf"{basepath}/{scanname}/1Pulse data/fitUncertainties.txt"
+#     Log = np.genfromtxt(
+#         logfile,
+#         unpack=True,
+#         delimiter=" ",
+#         skip_header=0,
+#         filling_values=0,
+#         invalid_raise=False,
+#     )
+#     errLog = np.genfromtxt(
+#         errfile,
+#         unpack=True,
+#         delimiter=" ",
+#         skip_header=0,
+#         filling_values=0,
+#         invalid_raise=False,
+#     )
+
+#     # get larmor frequency from fit to NMR signal peak of 1Pulse measurement
+#     FLarmor = 0
+#     if Log[0].size < 2:
+#         FLarmor = Log[0]
+#         FLarmor_err = errLog[0]
+#     else:
+#         FLarmor = Log[0][index]
+#         FLarmor_err = errLog[0][index]
+
+#     # get linewidth of NMR signal
+#     FWHM_n = 0
+#     if Log[1].size < 2:
+#         FWHM_n = Log[1]
+#         FWHM_n_err = errLog[1]
+#     else:
+#         FWHM_n = Log[1][index]
+#         FWHM_n_err = errLog[1][index]
+
+#     # get measured flux inside SQUID during the time of the pi/2 pulse
+#     area = 0
+#     if Log[2].size < 2:
+#         area = Log[2]
+#         area_err = errLog[2]
+#     else:
+#         area = Log[2][index]
+#         area_err = errLog[2][index]
+#     # check(area)
+
+#     return FLarmor, FWHM_n, area, FLarmor_err, FWHM_n_err, area_err
+
+
+# def GetDateTimeSimple(year, month, day, time_hms, return_as_int=False):
+#     datetime_obj = datetime.strptime(
+#         f"{year}-{month:02}-{day:02} {time_hms}", "%Y-%m-%d %H:%M:%S"
+#     )
+#     hour = datetime_obj.hour
+#     minute = datetime_obj.minute
+#     second = datetime_obj.second
+#     if return_as_int:  # for easy writing into params text file
+#         return math.floor(
+#             float(f"{year}{month}{day}{hour:02d}{minute:02d}{second:02d}")
+#         )
+#     else:
+#         return datetime_obj
 
 
 def MovAvgByStep(xstamp=None, rawsignal=None, weights=None, step_len=1, verbose=False):
@@ -3420,191 +3423,191 @@ def record_runtime_YorN(RECORD_RUNTIME):
     return record_runtime
 
 
-def PlotGaussianLine(
-    ax: matplotlib.axes.Axes,
-    x,
-    std,
-    sumofcounts,
-):
-    binsize = abs(x[1] - x[0]) / std
-    ax.plot(x, sumofcounts * binsize * norm.pdf(x / std))
+# def PlotGaussianLine(
+#     ax: matplotlib.axes.Axes,
+#     x,
+#     std,
+#     sumofcounts,
+# ):
+#     binsize = abs(x[1] - x[0]) / std
+#     ax.plot(x, sumofcounts * binsize * norm.pdf(x / std))
 
 
-def get_value_after_keyword(file, keyword):
-    with open(file, "r") as file:
-        for line in file:
-            if line.startswith(keyword):  # Observe Freq., 	461.79573699999997 MHz
-                value = line.split()[2]
-                try:
-                    return float(value)
-                except:
-                    try:
-                        if value[-1] == "u":
-                            return float(value[:-1]) * 1e-6
-                        elif value[-1] == "m":
-                            return float(value[:-1]) * 1e-3
-                    except:
-                        return value
-    return 0
+# def get_value_after_keyword(file, keyword):
+#     with open(file, "r") as file:
+#         for line in file:
+#             if line.startswith(keyword):  # Observe Freq., 	461.79573699999997 MHz
+#                 value = line.split()[2]
+#                 try:
+#                     return float(value)
+#                 except:
+#                     try:
+#                         if value[-1] == "u":
+#                             return float(value[:-1]) * 1e-6
+#                         elif value[-1] == "m":
+#                             return float(value[:-1]) * 1e-3
+#                     except:
+#                         return value
+#     return 0
 
 
-def get_nextline_after_keyword(file, keyword):
-    values = []
-    with open(file, "r", encoding="utf-8", errors="ignore") as file:
-        KWfound = False
-        for line in file:
-            if KWfound:
-                values = [float(x) for x in line.strip().split()]
-                break
-            elif keyword in line:
-                KWfound = True
-    return values
+# def get_nextline_after_keyword(file, keyword):
+#     values = []
+#     with open(file, "r", encoding="utf-8", errors="ignore") as file:
+#         KWfound = False
+#         for line in file:
+#             if KWfound:
+#                 values = [float(x) for x in line.strip().split()]
+#                 break
+#             elif keyword in line:
+#                 KWfound = True
+#     return values
 
 
-def ChisqMeanDistribution(N_mean: int = 240, Nsamples: int = 5000):
+# def ChisqMeanDistribution(N_mean: int = 240, Nsamples: int = 5000):
 
-    samples = norm.rvs(size=N_mean * Nsamples)
+#     samples = norm.rvs(size=N_mean * Nsamples)
 
-    samples = samples.reshape((N_mean, Nsamples))
+#     samples = samples.reshape((N_mean, Nsamples))
 
-    avg = np.mean(samples**2, axis=0)
+#     avg = np.mean(samples**2, axis=0)
 
-    print(avg.shape)
+#     print(avg.shape)
 
-    hist, bin_edges = np.histogram(avg, bins=10)
+#     hist, bin_edges = np.histogram(avg, bins=10)
 
-    hist_x = []
-    hist_y = []
-    for i, count in enumerate(hist):
-        if count > 0:
-            hist_x.append((bin_edges[i] + bin_edges[i + 1]) / 2.0)
-            hist_y.append(count)
+#     hist_x = []
+#     hist_y = []
+#     for i, count in enumerate(hist):
+#         if count > 0:
+#             hist_x.append((bin_edges[i] + bin_edges[i + 1]) / 2.0)
+#             hist_y.append(count)
 
-    plt.figure()
-    plt.scatter(
-        hist_x,
-        hist_y,
-        color="green",
-        edgecolors="k",
-        linewidths=1,
-        marker="o",
-        s=6,
-        zorder=6,
-        label="histogram",
-    )
-    plt.plot(hist_x, hist_y)
-    plt.yscale("log")
-    plt.show()
-
-
-def checkDrift(
-    current_data,
-    reference_data,
-    stattest_threshold: float = 0.05,
-    makeplot: bool = False,
-    verbose: bool = False,
-):
-    """ """
-    # ensure data length is enough for statistical analysis
-    assert len(current_data) > 100
-    assert len(reference_data) > 100
-
-    # pack sample data
-    reference_data = pd.DataFrame(
-        {"timestamp": np.arange(len(reference_data)), "value": reference_data}
-    )
-
-    current_data = pd.DataFrame(
-        {"timestamp": np.arange(len(current_data)), "value": current_data}
-    )
-
-    # Create and run the report
-    data_drift_report = Report(
-        metrics=[DataDriftPreset(stattest_threshold=stattest_threshold)]
-    )
-    data_drift_report.run(reference_data=reference_data, current_data=current_data)
-
-    # Extract the results
-    results = data_drift_report.as_dict()
-    threshold = results["metrics"][1]["result"]["drift_by_columns"]["timestamp"][
-        "stattest_threshold"
-    ]
-    dataset_drift = results["metrics"][0]["result"]["dataset_drift"]
-    # print(results['metrics'][0]['result'].keys())
-    # dict_keys(['drift_share', 'number_of_columns', 'number_of_drifted_columns', 'share_of_drifted_columns', 'dataset_drift'])
-    # print(results['metrics'][1]['result'].keys())
-    # dict_keys(['number_of_columns', 'number_of_drifted_columns', 'share_of_drifted_columns', 'dataset_drift', 'drift_by_columns', 'current_fi', 'reference_fi'])
-
-    if verbose:
-        print(f"threshold = {threshold:.2e}")
-        print(f"dataset_drift = {dataset_drift}")
-
-    if makeplot:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(
-            reference_data["timestamp"], reference_data["value"], label="Reference Data"
-        )
-        ax.plot(current_data["timestamp"], current_data["value"], label="Current Data")
-        ax.set_title("Time-Series Data Drift")
-        ax.set_xlabel("Timestamp")
-        ax.set_ylabel("Value")
-        ax.legend()
-        plt.show()
-    return dataset_drift  # boolen
+#     plt.figure()
+#     plt.scatter(
+#         hist_x,
+#         hist_y,
+#         color="green",
+#         edgecolors="k",
+#         linewidths=1,
+#         marker="o",
+#         s=6,
+#         zorder=6,
+#         label="histogram",
+#     )
+#     plt.plot(hist_x, hist_y)
+#     plt.yscale("log")
+#     plt.show()
 
 
-def CompareCheckNorm(alpha=0.05):
-    # Perform a Monte Carlo hypothesis test.
-    print("Perform a Monte Carlo hypothesis test.")
-    MCtest_mistake = 0
-    example_data = np.random.normal(loc=0, scale=1, size=1000)
-    for i in tqdm(range(1000)):
-        data = np.random.normal(loc=0, scale=1, size=10000)
-        datadrfit = checkDrift(
-            current_data=data, reference_data=example_data, stattest_threshold=alpha
-        )
-        # Interpret the result
-        if datadrfit:
-            MCtest_mistake += 1
-    sys.stdout.write("\n")
+# def checkDrift(
+#     current_data,
+#     reference_data,
+#     stattest_threshold: float = 0.05,
+#     makeplot: bool = False,
+#     verbose: bool = False,
+# ):
+#     """ """
+#     # ensure data length is enough for statistical analysis
+#     assert len(current_data) > 100
+#     assert len(reference_data) > 100
 
-    # Perform Shapiro-Wilk test
-    print("Shapiro-Wilk test")
-    shapiro_mistake = 0
-    for i in tqdm(range(1000)):
-        data = np.random.normal(loc=0, scale=1, size=10000)
-        stat, p = stats.shapiro(data)
-        # Interpret the result
-        if p < alpha:
-            shapiro_mistake += 1
-    sys.stdout.write("\n")
+#     # pack sample data
+#     reference_data = pd.DataFrame(
+#         {"timestamp": np.arange(len(reference_data)), "value": reference_data}
+#     )
 
-    # Perform jarque_bera test
-    print("jarque_bera test")
-    jarque_bera_mistake = 0
-    for i in tqdm(range(1000)):
-        data = np.random.normal(loc=0, scale=1, size=10000)
-        stat, p = stats.jarque_bera(data)
-        # Interpret the result
-        if p < alpha:
-            jarque_bera_mistake += 1
-    sys.stdout.write("\n")
+#     current_data = pd.DataFrame(
+#         {"timestamp": np.arange(len(current_data)), "value": current_data}
+#     )
 
-    # Perform D'Agostino and Pearson's test
-    print("jarque_bera test")
-    normaltest_mistake = 0
-    for i in tqdm(range(1000)):
-        data = np.random.normal(loc=0, scale=1, size=10000)
-        stat, p = stats.normaltest(data)
-        # Interpret the result
-        if p < alpha:
-            normaltest_mistake += 1
-    sys.stdout.write("\n")
+#     # Create and run the report
+#     data_drift_report = Report(
+#         metrics=[DataDriftPreset(stattest_threshold=stattest_threshold)]
+#     )
+#     data_drift_report.run(reference_data=reference_data, current_data=current_data)
 
-    check(MCtest_mistake)
-    check(shapiro_mistake)
-    check(jarque_bera_mistake)
-    check(normaltest_mistake)
+#     # Extract the results
+#     results = data_drift_report.as_dict()
+#     threshold = results["metrics"][1]["result"]["drift_by_columns"]["timestamp"][
+#         "stattest_threshold"
+#     ]
+#     dataset_drift = results["metrics"][0]["result"]["dataset_drift"]
+#     # print(results['metrics'][0]['result'].keys())
+#     # dict_keys(['drift_share', 'number_of_columns', 'number_of_drifted_columns', 'share_of_drifted_columns', 'dataset_drift'])
+#     # print(results['metrics'][1]['result'].keys())
+#     # dict_keys(['number_of_columns', 'number_of_drifted_columns', 'share_of_drifted_columns', 'dataset_drift', 'drift_by_columns', 'current_fi', 'reference_fi'])
+
+#     if verbose:
+#         print(f"threshold = {threshold:.2e}")
+#         print(f"dataset_drift = {dataset_drift}")
+
+#     if makeplot:
+#         fig, ax = plt.subplots(figsize=(10, 6))
+#         ax.plot(
+#             reference_data["timestamp"], reference_data["value"], label="Reference Data"
+#         )
+#         ax.plot(current_data["timestamp"], current_data["value"], label="Current Data")
+#         ax.set_title("Time-Series Data Drift")
+#         ax.set_xlabel("Timestamp")
+#         ax.set_ylabel("Value")
+#         ax.legend()
+#         plt.show()
+#     return dataset_drift  # boolen
+
+
+# def CompareCheckNorm(alpha=0.05):
+#     # Perform a Monte Carlo hypothesis test.
+#     print("Perform a Monte Carlo hypothesis test.")
+#     MCtest_mistake = 0
+#     example_data = np.random.normal(loc=0, scale=1, size=1000)
+#     for i in tqdm(range(1000)):
+#         data = np.random.normal(loc=0, scale=1, size=10000)
+#         datadrfit = checkDrift(
+#             current_data=data, reference_data=example_data, stattest_threshold=alpha
+#         )
+#         # Interpret the result
+#         if datadrfit:
+#             MCtest_mistake += 1
+#     sys.stdout.write("\n")
+
+#     # Perform Shapiro-Wilk test
+#     print("Shapiro-Wilk test")
+#     shapiro_mistake = 0
+#     for i in tqdm(range(1000)):
+#         data = np.random.normal(loc=0, scale=1, size=10000)
+#         stat, p = stats.shapiro(data)
+#         # Interpret the result
+#         if p < alpha:
+#             shapiro_mistake += 1
+#     sys.stdout.write("\n")
+
+#     # Perform jarque_bera test
+#     print("jarque_bera test")
+#     jarque_bera_mistake = 0
+#     for i in tqdm(range(1000)):
+#         data = np.random.normal(loc=0, scale=1, size=10000)
+#         stat, p = stats.jarque_bera(data)
+#         # Interpret the result
+#         if p < alpha:
+#             jarque_bera_mistake += 1
+#     sys.stdout.write("\n")
+
+#     # Perform D'Agostino and Pearson's test
+#     print("jarque_bera test")
+#     normaltest_mistake = 0
+#     for i in tqdm(range(1000)):
+#         data = np.random.normal(loc=0, scale=1, size=10000)
+#         stat, p = stats.normaltest(data)
+#         # Interpret the result
+#         if p < alpha:
+#             normaltest_mistake += 1
+#     sys.stdout.write("\n")
+
+#     check(MCtest_mistake)
+#     check(shapiro_mistake)
+#     check(jarque_bera_mistake)
+#     check(normaltest_mistake)
 
 
 def print_progress_bar(
@@ -3673,41 +3676,41 @@ def exampleofprogress():
     sys.stdout.write("\n")  # Move to the next line after the progress bar is complete
 
 
-def chi_squared_pdf(bincnt, counts, v):
-    return v[0] * np.max(counts) * chi2.pdf(bincnt / v[1] + v[2], v[3])
+# def chi_squared_pdf(bincnt, counts, v):
+#     return v[0] * np.max(counts) * chi2.pdf(bincnt / v[1] + v[2], v[3])
 
 
-def RNCF_chi2(bincnt, counts, v):
-    return np.linalg.norm(counts - chi_squared_pdf(bincnt, v))
+# def RNCF_chi2(bincnt, counts, v):
+#     return np.linalg.norm(counts - chi_squared_pdf(bincnt, v))
 
 
-def gamma_pdf(bincnt, counts, v):
-    return gamma.pdf(bincnt, v[0], v[1], v[2])  # shape, loc, scale
+# def gamma_pdf(bincnt, counts, v):
+#     return gamma.pdf(bincnt, v[0], v[1], v[2])  # shape, loc, scale
 
 
-def RNCF_gamma(bincnt, counts, v):
-    return np.linalg.norm(counts - gamma_pdf(bincnt, v))
+# def RNCF_gamma(bincnt, counts, v):
+#     return np.linalg.norm(counts - gamma_pdf(bincnt, v))
 
 
-def gamma_pdf2(bincnt, counts, v):
-    return v[0] * np.max(counts) * gamma.pdf(bincnt / v[1] + v[2], v[3], v[4], v[5])
+# def gamma_pdf2(bincnt, counts, v):
+#     return v[0] * np.max(counts) * gamma.pdf(bincnt / v[1] + v[2], v[3], v[4], v[5])
 
 
-def RNCF_gamma2(bincnt, counts, v):
-    return np.linalg.norm(counts - gamma_pdf2(bincnt, v))
+# def RNCF_gamma2(bincnt, counts, v):
+#     return np.linalg.norm(counts - gamma_pdf2(bincnt, v))
 
 
-def count_text_rows(file_path):
-    text_row_count = 0
-    with open(file_path, "r") as file:
-        for line in file:
-            try:
-                # Try to convert the line to a float
-                float(line.strip())
-            except ValueError:
-                # If conversion fails, it's a text row
-                text_row_count += 1
-    return text_row_count
+# def count_text_rows(file_path):
+#     text_row_count = 0
+#     with open(file_path, "r") as file:
+#         for line in file:
+#             try:
+#                 # Try to convert the line to a float
+#                 float(line.strip())
+#             except ValueError:
+#                 # If conversion fails, it's a text row
+#                 text_row_count += 1
+#     return text_row_count
 
 
 def getFWHM(x, y):
@@ -3857,3 +3860,111 @@ def get_FWHM_indice(x, y):
     FWHMin = abs(x_right - x_left)
 
     return FWHMin
+
+
+
+class PhysicalObject:
+    """
+    Base class for physical objects with PhysicalQuantity attributes.
+    Automatically converts units and saves quantities to HDF5.
+    """
+
+    def useCommonUnits(self, verbose: bool = False):
+        """
+        Convert all PhysicalQuantity attributes to their common units.
+        Subclasses should define a dict `physicalQuantities` mapping attribute names
+        to desired units.
+        """
+        assert hasattr(self, "physicalQuantities")
+
+        for attr_name, unit in self.physicalQuantities.items():
+            attr = getattr(self, attr_name, None)
+            if isinstance(attr, PhysicalQuantity):
+                setattr(self, attr_name, _safe_convert(attr, unit))
+
+        if verbose:
+            print(f"Converted quantities to common units: {list(self.physicalQuantities.keys())}")
+
+    def saveToFile_h5(self, pathAndName: str, h5_group_name:str, verbose: bool = False):
+        """Save this object to an HDF5 file."""
+        suffix = "" if pathAndName.endswith(".h5") else ".h5"
+        with h5py.File(pathAndName + suffix, "w") as h5f:
+            group = h5f.create_group(h5_group_name)
+            self.saveTo_h5group(group)
+        if verbose:
+            print(f"Saved {self.__class__.__name__} to {pathAndName + suffix}")
+
+    def saveTo_h5group(self, group: h5py.Group):
+        """Save all PhysicalQuantity attributes to the HDF5 group."""
+        self.useCommonUnits()
+        
+        # Save name if exists
+        if hasattr(self, "name"):
+            group.create_dataset(
+                "name", data=["nameless" if self.name is None else self.name]
+            )
+
+        # Save all PhysicalQuantity attributes
+
+        assert hasattr(self, "physicalQuantities")
+        for attr_name, unit in self.physicalQuantities.items():
+            attr = getattr(self, attr_name, None)
+            if isinstance(attr, PhysicalQuantity):
+                subgroup = group.create_group(attr_name)
+                subgroup.create_dataset("value", data=[attr.value])
+                subgroup.create_dataset("unit", data=[attr.unit])
+
+# class PhysicalObject:
+#     def __init__(
+#         self,
+#         name=None,
+#         verbose: bool = False,
+#     ):  # in Ohm
+#         """
+#         name : str
+#             name of the
+#         """
+#         self.name = name
+#         self.Lcoil = Lcoil
+#         self.gV = gV
+#         self.vol = vol
+
+#         # make sure that we use common units for quantities
+#         self.useCommonUnits()
+
+#     def useCommonUnits(self, verbose: bool = False):
+#         """
+#         Convert relevant physical quantities to commonly-used units.
+#         """
+
+#         self.Lcoil = _safe_convert(self.Lcoil, "nH")
+#         self.gV = _safe_convert(self.gV, "1/meter")
+#         self.vol = _safe_convert(self.vol, "cm**3")
+
+#         if verbose:
+#             print("Converted to common units where applicable.")
+
+#     def saveToFile_h5(self, pathAndName: str = None, verbose: bool = False):
+#         """ """
+#         if pathAndName[-3:] != ".h5":
+#             suffix = ".h5"
+#         else:
+#             suffix = ""
+#         h5f = h5py.File(pathAndName + suffix, "w")
+#         group = h5f.create_group("pickup")
+#         self.saveTo_h5group(group=group)
+#         h5f.close()
+
+#     def saveTo_h5group(self, group: h5py.Group):
+#         self.useCommonUnits()
+
+#         group.create_dataset(
+#             "name", data=["nameless" if self.name is None else self.name]
+#         )
+
+#         for name in ["Lcoil", "gV", "vol"]:
+#             attr: PhysicalQuantity = getattr(self, name)
+#             if attr is not None:
+#                 subgroup = group.create_group(name)
+#                 subgroup.create_dataset("value", data=[attr.value])
+#                 subgroup.create_dataset("unit", data=[attr.unit])

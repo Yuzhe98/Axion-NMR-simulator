@@ -563,7 +563,7 @@ class Simulation:
         sample: Sample = None,  # class Sample
         pickup: Pickup = None,
         SQUID: SQUID = None,
-        LIA:LockinAmplifier=None,
+        LIA: LockinAmplifier = None,
         magnet_pol: Magnet = None,
         magnet_det: Magnet = None,
         station=None,  # refer to class Station
@@ -587,7 +587,7 @@ class Simulation:
         self.sample = sample
         self.pickup = pickup
         self.SQUID = SQUID
-        self.LIA=LIA
+        self.LIA = LIA
         self.magnet_pol = magnet_pol
         self.magnet_det = magnet_det
 
@@ -661,6 +661,7 @@ class Simulation:
         if self.T2_s > self.T1_s:
             print("WARNING: T2 is larger than T1")
             # warnings.warn("T2 is larger than T1", DeprecationWarning)
+        self.trjry = None
 
     # def RandomJump(
     #     self,
@@ -1401,16 +1402,13 @@ class Simulation:
             dMzdt = gamma * (Mx * By - My * Bx) - (Mz - M0inf) / T1
 
             d2Mxdt2 = (
-                gamma * (dMydt * Bz + My * dBzdt - dMzdt * By - Mz * dBydt)
-                - dMxdt / T2
+                gamma * (dMydt * Bz + My * dBzdt - dMzdt * By - Mz * dBydt) - dMxdt / T2
             )
             d2Mydt2 = (
-                gamma * (dMzdt * Bx + Mz * dBxdt - dMxdt * Bz - Mx * dBzdt)
-                - dMydt / T2
+                gamma * (dMzdt * Bx + Mz * dBxdt - dMxdt * Bz - Mx * dBzdt) - dMydt / T2
             )
             d2Mzdt2 = (
-                gamma * (dMxdt * By + Mx * dBydt - dMydt * Bx - My * dBxdt)
-                - dMzdt / T1
+                gamma * (dMxdt * By + Mx * dBydt - dMydt * Bx - My * dBxdt) - dMzdt / T1
             )
 
             Mx1 = Mx + dMxdt * timeStep + d2Mxdt2 / 2.0 * timeStep**2
@@ -1446,7 +1444,9 @@ class Simulation:
         #
         timeStep = self.timeStep_s
         gamma = self.sample.gamma.value_in("Hz/T")
-        B0z_rot_amp = self.B0z_T - self.demodFreq_Hz / (self.sample.gamma.value_in("Hz/T") / (2 * np.pi))
+        B0z_rot_amp = self.B0z_T - self.demodFreq_Hz / (
+            self.sample.gamma.value_in("Hz/T") / (2 * np.pi)
+        )
         B0z_rot = B0z_rot_amp * np.ones(len(self.excField.B_vec))
         B0_rot = np.outer(B0z_rot, np.array([0, 0, 1]))
         if usenumba:
@@ -1829,7 +1829,9 @@ class Simulation:
             check(self.avgMzsq)
             check(np.sqrt(self.avgMxsq + self.avgMysq))
 
-    def saveToH5(self, h5fpathandname=None, saveintv=1, verbose=False):  # int
+    def saveToFile_h5(
+        self, pathAndName: str = None, saveintv: int = 1, verbose: bool = False
+    ):
         """ """
         # self.name = name
         # self.sample = sample
@@ -1844,52 +1846,73 @@ class Simulation:
         # self.simurate = simurate
         # self.simustep = 1.0/self.simurate
         # self.ALPwind = ALPwind
-        if h5fpathandname[-3:] != ".h5":
+        if pathAndName[-3:] != ".h5":
             suffix = ".h5"
         else:
             suffix = ""
-        h5f = h5py.File(h5fpathandname + suffix, "w")
-        h5demod0 = h5f.create_group("NMRKineticSimu/demods/0")
-        h5demod0.create_dataset(
-            "demodfreq",
-            data=np.array([abs(self.sample.gamma.value_in("Hz/T") * self.B0z_T / (2 * np.pi))]),
-        )
-        h5demod0.create_dataset(
-            "samprate", data=np.array([self.simuRate_Hz / (1.0 * saveintv)])
-        )
-        h5demod0.create_dataset("filter_order", data=np.array([0], dtype=np.int64))
-        h5demod0.create_dataset("filter_TC", data=np.array([0.0]))
-        h5demod0.create_dataset("timestamp", data=np.array([0]))
-        h5demod0.create_dataset("auxin0", data=np.array([0]))
-        h5demod0.create_dataset("samplex", data=self.trjry[0:-1:saveintv, 0])
-        h5demod0.create_dataset("sampley", data=self.trjry[0:-1:saveintv, 1])
+        h5f = h5py.File(pathAndName + suffix, "w")
+        save_LIA = True
+        # save_LIAdata = False
+        save_axion = False
+        save_station = False
+        save_sample = True
+        save_magnet_det = True
+        save_pickup = True
+        save_SQUID = True
+        
+        if save_LIA:
+            LIA_group = h5f.create_group("LockinAmplifier")
+            self.LIA.saveTo_h5group(group=LIA_group)
+            if self.trjry is not None:
+                sample = LIA_group.create_group("data")
+                for i, axis in enumerate(["x", "y", "z"]):
+                    sample_subgroup = sample.create_group(axis)
+                    sample_subgroup.create_dataset("value", data=self.trjry[0:-1:saveintv, i])  # TODO mind the unit
+                    sample_subgroup.create_dataset("unit", data=["dimensionless"])
+                    del sample_subgroup
+            
+            # LIA_group.create_dataset("samplex", data=self.trjry[0:-1:saveintv, 0])
+            # LIA_group.create_dataset("sampley", data=self.trjry[0:-1:saveintv, 1])
+            # LIA_group.create_dataset("samplez", data=self.trjry[0:-1:saveintv, 2])
 
-        h5demod1 = h5f.create_group("NMRKineticSimu/demods/1")
-        h5demod1.create_dataset("samplez", data=self.trjry[0:-1:saveintv, 2])
+        if save_axion:
+            h5axion = h5f.create_group("ALPwind")
+            h5axion.create_dataset("name", data=[self.excField.name])
+            h5axion.create_dataset("nu", data=[self.excField.nu])
+            h5axion.create_dataset("gaNN", data=[self.excField.gaNN])
+            h5axion.create_dataset(
+                "direction_solar", data=self.excField.direction_solar
+            )
+            h5axion.create_dataset(
+                "direction_earth", data=self.excField.direction_earth
+            )
 
-        h5axion = h5f.create_group("ALPwind")
-        h5axion.create_dataset("name", data=[self.excField.name])
-        h5axion.create_dataset("nu", data=[self.excField.nu])
-        h5axion.create_dataset("gaNN", data=[self.excField.gaNN])
-        h5axion.create_dataset("direction_solar", data=self.excField.direction_solar)
-        h5axion.create_dataset("direction_earth", data=self.excField.direction_earth)
+        if save_station:
+            h5station = h5f.create_group("Station")
+            h5station.create_dataset("name", data=[self.station.name])
+            h5station.create_dataset("latitude", data=[self.station.latitude])
+            h5station.create_dataset("longitude", data=[self.station.longitude])
+            h5station.create_dataset("NSsemisphere", data=[self.station.NSsemisphere])
+            h5station.create_dataset("EWsemisphere", data=[self.station.EWsemisphere])
+            h5station.create_dataset("elevation", data=[self.station.elevation])
 
-        h5station = h5f.create_group("Station")
-        h5station.create_dataset("name", data=[self.station.name])
-        h5station.create_dataset("latitude", data=[self.station.latitude])
-        h5station.create_dataset("longitude", data=[self.station.longitude])
-        h5station.create_dataset("NSsemisphere", data=[self.station.NSsemisphere])
-        h5station.create_dataset("EWsemisphere", data=[self.station.EWsemisphere])
-        h5station.create_dataset("elevation", data=[self.station.elevation])
+        if save_sample:
+            sample_group = h5f.create_group("sample")
+            self.sample.saveTo_h5group(group=sample_group)
 
-        h5sample = h5f.create_group("Sample")
-        h5sample.create_dataset("name", data=[self.sample.name])
-        h5sample.create_dataset("gyroratio", data=[self.sample.gamma.value_in("Hz/T")])
-        h5sample.create_dataset("T1", data=np.array([self.T1_s]))
-        h5sample.create_dataset("T2", data=np.array([self.T2_s]))
-        h5sample.create_dataset("pol", data=[self.sample.pol])
-        h5sample.create_dataset("vol", data=[self.sample.vol])
-        h5sample.create_dataset("mdm", data=[self.sample.mu])
+        if save_magnet_det:
+            magnet_det_group = h5f.create_group("magnet_det")
+            self.magnet_det.saveTo_h5group(group=magnet_det_group)
+        
+        if save_pickup:
+            pickup_group = h5f.create_group("pickup")
+            self.pickup.saveTo_h5group(group=pickup_group)
+
+        if save_SQUID:
+            SQUID_group = h5f.create_group("SQUID")
+            self.SQUID.saveTo_h5group(group=SQUID_group)
+
+
         h5f.close()
 
     def analyzeTrajectory(

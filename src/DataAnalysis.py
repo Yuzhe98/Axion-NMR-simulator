@@ -881,7 +881,7 @@ class DualChanSig:
             hist_info = f"sum of counts={sumofcounts:d}\nmean={mean:.1e} [V^2/Hz] std={std:.1e} [V^2/Hz]"
             # if normalizebysigma:
             # bin_edges /= std
-            ax.set_xlabel("PSD / $\\sigma_{\mathrm{PSD}}$")
+            ax.set_xlabel("PSD / $\\sigma_{\\mathrm{PSD}}$")
             # else:
             #     ax.set_xlabel('signal [V]')
             hist_x = []
@@ -2572,7 +2572,7 @@ class DualChanSig:
             Higher the value, smoother the line.
             Defaults to 1.
             To know more about the effects of it, check figures in
-            CASPEr Code\Supplementary\Smoothforautofitting
+            CASPEr Code\\Supplementary\\Smoothforautofitting
 
         fitrange : list, optional
             The index range for the fitting.
@@ -3567,7 +3567,7 @@ class DualChanSig:
 
             for ax in [PSD_ax, PSDsubSG_ax]:  # SG_ax,
                 ax.legend()
-                ax.set_ylabel("PSD [$\mathrm{V}^2/\mathrm{Hz}$]")
+                ax.set_ylabel("PSD [$\\mathrm{V}^2/\\mathrm{Hz}$]")
 
             allmin = np.amin([np.amin(self.PSD), np.amin(sg), np.amin(self.PSD - sg)])
             allmax = np.amax([np.amax(self.PSD), np.amax(sg), np.amax(self.PSD - sg)])
@@ -3587,7 +3587,7 @@ class DualChanSig:
                 hist_info = f"sum of counts={sumofcounts:d}\nmean={mean:.1e} [V^2/Hz] std={std:.1e} [V^2/Hz]"
                 # if normalizebysigma:
                 # bin_edges /= std
-                ax.set_xlabel("PSD / $\\sigma_{\mathrm{PSD}}$")
+                ax.set_xlabel("PSD / $\\sigma_{\\mathrm{PSD}}$")
                 # else:
                 #     ax.set_xlabel('signal [V]')
                 hist_x = []
@@ -4468,7 +4468,7 @@ class DualChanSig:
             label="Phase of  FFT",
             color="tab:cyan",
         )
-        phase_ax.set_ylabel("Phase / $\degree$")
+        phase_ax.set_ylabel("Phase / $\\degree$")
         phase_ax.set_xlabel("Frequency [Hz]")
         phase_ax.grid(True)
         phase_ax.legend(loc="upper right")
@@ -4762,7 +4762,7 @@ class DualChanSig:
                 label="Phase of  FFT",
                 color="tab:cyan",
             )
-            phase_ax.set_ylabel("Phase / $\degree$")
+            phase_ax.set_ylabel("Phase / $\\degree$")
             phase_ax.set_xlabel("Frequency / Hz")
             phase_ax.grid(True)
             phase_ax.legend(loc="upper right")
@@ -5015,7 +5015,7 @@ class DualChanSig:
 
         Mf : float, optional
             Feedback sensitivity which can be found in the SQUID specifications.
-            For the SQUID we usually use, M_f = 31 706 \phi_0 / A???? Is this true?
+            For the SQUID we usually use, M_f = 31 706 \\Phi_0 / A???? Is this true?
             Defaults to 1. / (44.12e-6).
 
         Rf : float, optional

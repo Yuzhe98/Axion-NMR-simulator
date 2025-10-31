@@ -3,7 +3,7 @@
 ##########################################
 
 from pint import UnitRegistry
-
+from typing import Optional
 import numpy as np
 
 # Create a Unit Registry for managing units
@@ -107,7 +107,7 @@ class PhysicalQuantity:
             area used in nuclear physics (10⁻²⁸ m²).
     """
 
-    def __init__(self, value, unit):
+    def __init__(self, value: float, unit: str):
         """
         Initialize a physical quantity using pint's Quantity.
         :param value: Numerical value of the quantity
@@ -262,7 +262,7 @@ class PhysicalQuantity:
         # If not handled, let NumPy fall back
         return NotImplemented
 
-    def convert_to(self, unit):
+    def convert_to(self, unit: str)-> "PhysicalQuantity":
         """
         Convert the quantity to a new unit.
         :param unit: The new unit as a string
@@ -280,39 +280,13 @@ class PhysicalQuantity:
         converted_quantity = self.quantity.to(unit)
         return converted_quantity.magnitude
 
-    def example(self):
-        # Define physical quantities
-        c = PhysicalQuantity(299792458, "m/s")  # Speed of light
-        k = PhysicalQuantity(8.617333262145e-5, "eV/K")  # Boltzmann constant
-        h = PhysicalQuantity(4.135667696e-15, "eV*s")  # Planck constant
 
-        # Perform operations
-        energy = PhysicalQuantity(2, "eV")
-        time = PhysicalQuantity(1e-9, "s")
-        power = energy / time
-        print(power)  # Output: 2.0 eV / s
-
-        # Multiplication
-        momentum = energy * time
-        print(momentum)  # Output: 2.0 electron_volt * s
-
-        # Conversion
-        h_in_Js = h.convert_to("J*s")
-        print(h_in_Js)  # Output: 6.62607015e-34 joule * s
-
-        # Add compatible quantities
-        distance1 = PhysicalQuantity(10, "m")
-        distance2 = PhysicalQuantity(5, "m")
-        total_distance = distance1 + distance2
-        print(total_distance)  # Output: 15 meter
-
-        # Incompatible units raise errors
-        try:
-            total = distance1 + energy
-        except Exception as e:
-            print(
-                e
-            )  # Output: Cannot convert from 'electron_volt' ([mass]*[length]**2/[time]**2) to 'meter' ([length])
+def _safe_convert(quantity: Optional[PhysicalQuantity], unit: str) -> Optional[PhysicalQuantity]:
+    """
+    convert quantities to a new unit
+    return None if the quantity is None
+    """
+    return quantity.convert_to(unit) if quantity is not None else None
 
 
 # Electron charge
@@ -408,16 +382,14 @@ if __name__ == "__main__":
     print("np.multiply(a, b) =", np.multiply(a, b))  # m*m
     print("np.divide(a, c)   =", np.divide(a, c))  # m/s
 
-    # print(abs(gamma_Xe129))
-    qu = (
-        hbar
-        * gamma_p
-        * PhysicalQuantity(100, "tesla")
-        / (2 * kB * PhysicalQuantity(0.002, "K"))
-    )
-    print(qu.convert_to(""))
-    pol = np.tanh(qu)
-    print(pol)
+    print(mu_Xe129.convert_to("J/T").unit)
+    induc = PhysicalQuantity(100, "henry")
+    print(induc.convert_to("nanohenry"))
+    print(induc.convert_to("nH"))
+
+    res = PhysicalQuantity(100, "ohm")
+    print(res.convert_to("kiloohm"))
+    # print(induc.convert_to("nH"))
 
 
 """
