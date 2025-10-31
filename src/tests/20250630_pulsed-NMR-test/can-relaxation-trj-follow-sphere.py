@@ -36,7 +36,7 @@ simu = Simulation(
     init_mag_amp=1.0,
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
-    demodfreq=1e6,
+    demodFreq=1e6,
     B0z=(1e6 - 100) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=(1e5),  #
     duration=0.1,
@@ -45,7 +45,7 @@ simu = Simulation(
 )
 
 simu.generatePulseExcitation(
-    pulseDur=10000.0 * simu.timeStep,
+    pulseDur=10000.0 * simu.timeStep_s,
     tipAngle=np.pi / 1,
     nu_rot=100,
     # direction=np.array([1, 0, 0]),  # along x-axis
@@ -57,12 +57,12 @@ simu.generatePulseExcitation(
 # check(simu.excField.dBdt_vec)
 
 tic = time.perf_counter()
-simu.GenerateTrajectory(verbose=False)
+simu.generateTrajectory(verbose=False)
 toc = time.perf_counter()
 print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-simu.MonitorTrajectory(plotrate=None, verbose=True)
-simu.VisualizeTrajectory3D(
+simu.monitorTrajectory(plotrate=None, verbose=True)
+simu.visualizeTrajectory3D(
     plotrate=None,  # [Hz]
     # rotframe=True,
     verbose=False,

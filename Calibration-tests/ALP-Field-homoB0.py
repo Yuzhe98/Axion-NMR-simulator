@@ -40,7 +40,7 @@ simu = Simulation(
     init_mag_amp=1.0,
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
-    demodfreq=1e6,
+    demodFreq=1e6,
     B0z=(1e6) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=(500),  #
     duration=300,
@@ -57,7 +57,7 @@ simu.excField.setALP_Field(
     nu_a=(-0.7),  # frequency in the rotating frame
     # direction: np.ndarray,  #  = np.array([1, 0, 0])
     use_stoch=True,
-    demodfreq=simu.demodfreq,
+    demodfreq=simu.demodFreq_Hz,
     makeplot=True,
 )
 simu.excType = "ALP"
@@ -65,11 +65,11 @@ toc = time.perf_counter()
 # print(f"setALP_Field() time consumption = {toc-tic:.3f} s")
 
 tic = time.perf_counter()
-simu.GenerateTrajectory(verbose=False)
+simu.generateTrajectory(verbose=False)
 toc = time.perf_counter()
 # print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-simu.MonitorTrajectory(verbose=True)
+simu.monitorTrajectory(verbose=True)
 # simu.VisualizeTrajectory3D(
 #     plotrate=1e3,  # [Hz]
 #     # rotframe=True,

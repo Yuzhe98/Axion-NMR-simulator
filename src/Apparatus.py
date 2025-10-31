@@ -9,10 +9,7 @@ from Sample import Sample
 
 from Envelope import (
     PhysicalQuantity,
-    gamma_Xe129,
     gamma_p,
-    mu_p,
-    mu_Xe129,
     hbar,
     kB,
     mu_0,
@@ -136,6 +133,7 @@ class LockinAmplifier:
         self.DTRC_Tc = DTRC_Tc
         self.DTRC_order = DTRC_order
 
+
 LIA = LockinAmplifier(
     name="virtual LIA",
     demodFreq=PhysicalQuantity(1.0, "MHz"),
@@ -144,6 +142,7 @@ LIA = LockinAmplifier(
     DTRC_order=None,
     verbose=False,
 )
+
 
 class CASPEr_LF:
     def __init__(
@@ -223,7 +222,7 @@ class CASPEr_LF:
         pol = np.tanh(ratio.convert_to(""))  # ensure dimensionless before tanh
 
         return pol
-    
+
     def getM0(
         self,
         pol,

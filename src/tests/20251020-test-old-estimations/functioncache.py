@@ -214,7 +214,7 @@ class LF_2025:
         rho_M_Methanol = PhysicalQuantity(0.792, "g / cm**3 ")
         molmassMethanol = PhysicalQuantity(32.04, "g / mol")
         rho_N_MethanolProton = (
-            PhysicalQuantity(4.0, "") * rho_M_Methanol / molmassMethanol * mol_to_N
+            PhysicalQuantity(4.0, "") * rho_M_Methanol / molmassMethanol * mol_to_num
         )
 
         self.sample = "Methanol"
@@ -231,7 +231,7 @@ class LF_2025:
         # Xe properites
         rho_M_LXe = PhysicalQuantity(3.1, "g / cm**3 ")
         molmassLXe = PhysicalQuantity(131.29, "g / mol")
-        rho_N_LXe129 = abundance * 1 * rho_M_LXe / molmassLXe * mol_to_N
+        rho_N_LXe129 = abundance * 1 * rho_M_LXe / molmassLXe * mol_to_num
         # check(abundance.convert_to('%'))
         # print(rhoN_MethanolProton.convert_to("1 / cm ** 3"))
 
@@ -305,7 +305,7 @@ class LF_2025:
         B_pol: PhysicalQuantity,
         Temp: PhysicalQuantity,
     ):
-        pol = hbar * self.gamma * B_pol / (2 * k * Temp)
+        pol = hbar * self.gamma * B_pol / (2 * kB * Temp)
         # pol = hbar * (2 * pi * nu_L) / ( 2 * k * Temp)
         # self.p = p.convert_to('')
         pol = pol.convert_to("")

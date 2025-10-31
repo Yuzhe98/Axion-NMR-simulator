@@ -39,7 +39,7 @@ simu = Simulation(
     init_mag_amp=1.0,
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
-    demodfreq=1e6,
+    demodFreq=1e6,
     B0z=(1e6 - 0) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=(6696.42871094),  #
     duration=5,
@@ -48,7 +48,7 @@ simu = Simulation(
 )
 
 simu.generatePulseExcitation(
-    pulseDur=1.0 * simu.duration,
+    pulseDur=1.0 * simu.duration_s,
     tipAngle=np.pi,
     direction=np.array([1, 0, 0]),
     showplt=False,  # whether to plot B_ALP
@@ -57,12 +57,12 @@ simu.generatePulseExcitation(
 )
 
 tic = time.perf_counter()
-simu.GenerateTrajectory(verbose=False)
+simu.generateTrajectory(verbose=False)
 toc = time.perf_counter()
 print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-simu.MonitorTrajectory(plotrate=1000, verbose=True)
-simu.VisualizeTrajectory3D(
+simu.monitorTrajectory(plotrate=1000, verbose=True)
+simu.visualizeTrajectory3D(
     plotrate=1e3,  # [Hz]
     # rotframe=True,
     verbose=False,
@@ -76,7 +76,7 @@ if processdata:
         showfit=True,
         spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
         ampunit="V",
-        specxlim=[simu.demodfreq - 20, simu.demodfreq + 12],
+        specxlim=[simu.demodFreq_Hz - 20, simu.demodFreq_Hz + 12],
         return_opt=True,
     )
     simu.trjryStream.GetNoPulseFFT()

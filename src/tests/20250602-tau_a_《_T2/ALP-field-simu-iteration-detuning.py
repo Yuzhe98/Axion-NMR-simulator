@@ -77,7 +77,7 @@ simu = Simulation(
     init_mag_amp=1.0,
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
-    demodfreq=demodfreq,
+    demodFreq=demodfreq,
     B0z=(1e6) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=simuRate,  #
     duration=duration,
@@ -98,7 +98,7 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
             nu_a=nu_a_offset,  # frequency in the rotating frame
             # direction: np.ndarray,  #  = np.array([1, 0, 0])
             use_stoch=use_stoch,
-            demodfreq=simu.demodfreq,
+            demodfreq=simu.demodFreq_Hz,
             # rand_seed=rand_seed,
             makeplot=False,
         )
@@ -107,7 +107,7 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
         # print(f"setALP_Field() time consumption = {toc-tic:.3f} s")
 
         # tic = time.perf_counter()
-        simu.GenerateTrajectory(verbose=False)
+        simu.generateTrajectory(verbose=False)
         # toc = time.perf_counter()
         # print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 

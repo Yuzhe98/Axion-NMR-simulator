@@ -79,7 +79,7 @@ for ALPnuorder in [6]:
             # simurate 1000, numofcohT=100000/axionwind.cohT, usejit @jit(types blabla). time = 107.1 s
 
             tic = time.perf_counter()
-            magnetization.GenerateTrajectory(verbose=False)
+            magnetization.generateTrajectory(verbose=False)
             toc = time.perf_counter()
             # print(f'GenerateTrajectory time consumption = {toc-tic:.3f} s')
             # simurate 1000, numofcohT=100/axionwind.cohT, not usejit. time = 4.2 s
@@ -103,8 +103,8 @@ for ALPnuorder in [6]:
             print(
                 "***************************************************************************"
             )
-            print(f"T2* = {magnetization.T2:e}")
-            magnetization.StatTrajectory(verbose=True)
+            print(f"T2* = {magnetization.T2_s:e}")
+            magnetization.statTrajectory(verbose=True)
             print(
                 "**************************************************************************"
             )
@@ -123,24 +123,24 @@ for ALPnuorder in [6]:
                 liastream.filter_TC = 0.0
                 liastream.filter_order = 0
                 liastream.dmodfreq = (
-                    magnetization.B0z * TestSample.gyroratio / (2 * np.pi)
+                    magnetization.B0z_T * TestSample.gyroratio / (2 * np.pi)
                 )
                 saveintv = 1
-                liastream.samprate = magnetization.simuRate / saveintv
+                liastream.samprate = magnetization.simuRate_Hz / saveintv
                 # check(magnetization.timestamp.shape)
                 # check(magnetization.trjry[0:-1:saveintv, 0].shape)
 
                 liastream.dataX = (
                     0.5
                     * magnetization.trjry[
-                        int(0 * magnetization.simuRate) : -1 : saveintv, 0
+                        int(0 * magnetization.simuRate_Hz) : -1 : saveintv, 0
                     ]
                 )  # * \
                 # np.cos(2 * np.pi * magnetization.nu_rot * magnetization.timestamp[0:-1:saveintv])
                 liastream.dataY = (
                     0.5
                     * magnetization.trjry[
-                        int(0 * magnetization.simuRate) : -1 : saveintv, 1
+                        int(0 * magnetization.simuRate_Hz) : -1 : saveintv, 1
                     ]
                 )  # * \
                 # np.sin(2 * np.pi * magnetization.nu_rot * magnetization.timestamp[0:-1:saveintv])
@@ -209,7 +209,7 @@ for ALPnuorder in [6]:
                 )
                 listofGammaandSAmp.append([T2star, np.amax(spectrum)])
                 listofT2andavgMtsq.append(
-                    [magnetization.T2, magnetization.avgMxsq + magnetization.avgMysq]
+                    [magnetization.T2_s, magnetization.avgMxsq + magnetization.avgMysq]
                 )  # , np.sum(spectrum), np.amax(spectrum)
                 print(
                     f"T2star = {T2star:g} , avg Mt sq = {magnetization.avgMxsq + magnetization.avgMysq:.2e}"

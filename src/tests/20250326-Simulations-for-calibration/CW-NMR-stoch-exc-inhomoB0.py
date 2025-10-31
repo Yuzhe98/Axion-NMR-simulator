@@ -46,7 +46,7 @@ for B0z in B0z_list:
         init_mag_amp=1.0,
         init_M_theta=0.0,  # [rad]
         init_M_phi=0.0,  # [rad]
-        demodfreq=1e6,
+        demodFreq=1e6,
         B0z=B0z,  # [T]
         simuRate=(6696.42871094),  #
         duration=10,
@@ -55,7 +55,7 @@ for B0z in B0z_list:
     )
     excField.nu = 1e6
     simu.generatePulseExcitation(
-        pulseDur=1.0 * simu.duration,
+        pulseDur=1.0 * simu.duration_s,
         tipAngle=np.pi / 1000,
         direction=np.array([1, 0, 0]),
         showplt=False,  # whether to plot B_ALP
@@ -69,7 +69,7 @@ for B0z in B0z_list:
     for nu_e in [1e6 + 1, 1e6 + 2, 1e6 + 3, 1e6 + 4]:
         excField.nu = nu_e  # [Hz]
         simu.generatePulseExcitation(
-            pulseDur=1.0 * simu.duration,
+            pulseDur=1.0 * simu.duration_s,
             tipAngle=np.pi / 1000,
             direction=np.array([1, 0, 0]),
             showplt=False,  # whether to plot B_ALP
@@ -83,7 +83,7 @@ for B0z in B0z_list:
     simu.excField.dBdt_vec = dBdt_vec
 
     tic = time.perf_counter()
-    simu.GenerateTrajectory(verbose=False)
+    simu.generateTrajectory(verbose=False)
     toc = time.perf_counter()
     print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
@@ -102,7 +102,7 @@ for B0z in B0z_list:
             showfit=True,
             spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
             ampunit="V",
-            specxlim=[simu.demodfreq - 20, simu.demodfreq + 12],
+            specxlim=[simu.demodFreq_Hz - 20, simu.demodFreq_Hz + 12],
             return_opt=True,
             showplt_opt=False,
         )
@@ -116,7 +116,7 @@ for B0z in B0z_list:
             showfit=True,
             spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
             ampunit="V",
-            specxlim=[simu.demodfreq - 20, simu.demodfreq + 12],
+            specxlim=[simu.demodFreq_Hz - 20, simu.demodFreq_Hz + 12],
             return_opt=True,
             showplt_opt=False,
         )

@@ -50,7 +50,7 @@ simu = Simulation(
     init_mag_amp=1.0,
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
-    demodfreq=1e6,
+    demodFreq=1e6,
     B0z=(1e6) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=(6696.42871094),  #
     duration=10,
@@ -59,7 +59,7 @@ simu = Simulation(
 )
 
 simu.generatePulseExcitation(
-    pulseDur=5.0 * simu.timeStep,
+    pulseDur=5.0 * simu.timeStep_s,
     tipAngle=np.pi / 2,
     direction=np.array([1, 0, 0]),
     showplt=False,  # whether to plot B_ALP
@@ -70,12 +70,12 @@ simu.generatePulseExcitation(
 # check(simu.excField.dBdt_vec)
 
 tic = time.perf_counter()
-simu.GenerateTrajectory(verbose=False)
+simu.generateTrajectory(verbose=False)
 toc = time.perf_counter()
 print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-simu.MonitorTrajectory(plotrate=133, verbose=True)
-simu.VisualizeTrajectory3D(
+simu.monitorTrajectory(plotrate=133, verbose=True)
+simu.visualizeTrajectory3D(
     plotrate=1e3,  # [Hz]
     # rotframe=True,
     verbose=False,
@@ -94,15 +94,19 @@ if processdata:
     liastream.filterstatus = "off"
     liastream.filter_TC = 0.0
     liastream.filter_order = 0
-    liastream.dmodfreq = simu.demodfreq
+    liastream.dmodfreq = simu.demodFreq_Hz
     saveintv = 1
-    liastream.samprate = simu.simuRate / saveintv
+    liastream.samprate = simu.simuRate_Hz / saveintv
     # check(simu.timestamp.shape)
     # check(simu.trjry[0:-1:saveintv, 0].shape)
 
-    liastream.dataX = 1 * simu.trjry[int(0 * simu.simuRate) : -1 : saveintv, 0]  # * \
+    liastream.dataX = (
+        1 * simu.trjry[int(0 * simu.simuRate_Hz) : -1 : saveintv, 0]
+    )  # * \
     # np.cos(2 * np.pi * simu.nu_rot * simu.timestamp[0:-1:saveintv])
-    liastream.dataY = 1 * simu.trjry[int(0 * simu.simuRate) : -1 : saveintv, 1]  # * \
+    liastream.dataY = (
+        1 * simu.trjry[int(0 * simu.simuRate_Hz) : -1 : saveintv, 1]
+    )  # * \
     # np.sin(2 * np.pi * simu.nu_rot * simu.timestamp[0:-1:saveintv])
 
     # liastream.dataX = 0.5 * 1 * \
