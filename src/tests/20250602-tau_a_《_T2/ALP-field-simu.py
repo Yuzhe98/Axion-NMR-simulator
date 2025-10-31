@@ -85,7 +85,7 @@ for i in range(num_runs):
         Bamp=Bamp,  # RMS amplitude of the pseudo-magnetic field in [T]
         nu_a=nu_a,  # frequency in the rotating frame
         use_stoch=use_stoch,
-        demodfreq=simu.demodFreq_Hz,
+        demodFreq=simu.demodFreq_Hz,
         makeplot=False,
     )
     simu.excType = "ALP"

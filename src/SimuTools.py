@@ -1,4 +1,4 @@
-from functioncache import *
+from src.functioncache import axion_lineshape, check
 
 import numpy as np
 
@@ -14,10 +14,10 @@ from scipy.stats import maxwell, uniform, expon
 
 import h5py
 
-from DataAnalysis import DualChanSig
-from Sample import Sample
-from Apparatus import Pickup, SQUID, Magnet
-from Envelope import PhysicalQuantity
+from src.DataAnalysis import DualChanSig
+from src.Sample import Sample
+from src.Apparatus import LockinAmplifier, Pickup, SQUID, Magnet
+from src.Envelope import PhysicalQuantity
 
 
 def gate(x: float | np.ndarray, start: float, stop: float) -> float:
@@ -203,7 +203,7 @@ class MagField:
         nu_a: float,  # frequency in the rotating frame
         use_stoch: bool,
         # direction: np.ndarray,  #  = np.array([1, 0, 0])
-        demodfreq: float,
+        demodFreq: float,
         rand_seed: int = None,
         makeplot: bool = False,
         verbose: bool = False,
@@ -226,8 +226,8 @@ class MagField:
             lineshape = axion_lineshape(
                 v_0=220e3,
                 v_lab=233e3,
-                nu_a=nu_a + demodfreq,
-                nu=frequencies + demodfreq,
+                nu_a=nu_a + demodFreq,
+                nu=frequencies + demodFreq,
                 case="grad_perp",
                 alpha=0.0,
             )
@@ -345,7 +345,7 @@ class MagField:
                 self.B_Stream.filterstatus = "off"
                 self.B_Stream.filter_TC = 0.0
                 self.B_Stream.filter_order = 0
-                self.B_Stream.demodfreq = demodfreq
+                self.B_Stream.demodfreq = demodFreq
                 saveintv = 1
                 self.B_Stream.samprate = 1.0 / timeStep / saveintv
 
@@ -382,7 +382,7 @@ class MagField:
                     spectype="PSD",  # in 'PSD', 'ASD', 'FLuxPSD', 'FluxASD'
                     ampunit="V",
                     specxunit="Hz",  # 'Hz' 'kHz' 'MHz' 'GHz' 'ppm' 'ppb'
-                    specxlim=[nu_a + demodfreq - 5, nu_a + demodfreq + 20],
+                    specxlim=[nu_a + demodFreq - 5, nu_a + demodFreq + 20],
                     # specylim=[0, 4e-23],
                     specyscale="linear",  # 'log', 'linear'
                     showstd=False,
@@ -400,8 +400,8 @@ class MagField:
             lineshape = axion_lineshape(
                 v_0=220e3,
                 v_lab=233e3,
-                nu_a=nu_a + demodfreq,
-                nu=frequencies + demodfreq,
+                nu_a=nu_a + demodFreq,
+                nu=frequencies + demodFreq,
                 case="grad_perp",
                 alpha=0.0,
             )
@@ -487,14 +487,14 @@ class MagField:
                 specxaxis, spectrum0, specxunit, specyunit = self.showTSandPSD(
                     dataX=self.B_vec[::1, 0],
                     dataY=self.B_vec[::1, 1],
-                    demodfreq=demodfreq,
+                    demodfreq=demodFreq,
                     samprate=1.0 / timeStep,
                     showplt_opt=False,
                 )
                 specxaxis, spectrum1, specxunit, specyunit = self.showTSandPSD(
                     dataX=self.dBdt_vec[::1, 0],
                     dataY=self.dBdt_vec[::1, 1],
-                    demodfreq=demodfreq,
+                    demodfreq=demodFreq,
                     samprate=1.0 / timeStep,
                     showplt_opt=False,
                 )
@@ -563,6 +563,7 @@ class Simulation:
         sample: Sample = None,  # class Sample
         pickup: Pickup = None,
         SQUID: SQUID = None,
+        LIA:LockinAmplifier=None,
         magnet_pol: Magnet = None,
         magnet_det: Magnet = None,
         station=None,  # refer to class Station
@@ -571,11 +572,11 @@ class Simulation:
         init_M_theta=0.0,  # [rad]
         init_M_phi=0.0,  # [rad]
         init_phase=0.0 * np.pi / 180,  # [rad]
-        demodFreq: PhysicalQuantity = None,
-        B0z=0.0,  # [T]  B0 in the laboratory frame.
+        # demodFreq: PhysicalQuantity = None,
+        # B0z=0.0,  # [T]  B0 in the laboratory frame.
         simuRate: PhysicalQuantity = None,  # simulation rate in [Hz]. simulation step = 1 / simurate
         duration: PhysicalQuantity = None,
-        excField=None,  # class AxionWind
+        excField=None,  # class MagField
         verbose=True,
     ):
         """
@@ -586,10 +587,11 @@ class Simulation:
         self.sample = sample
         self.pickup = pickup
         self.SQUID = SQUID
+        self.LIA=LIA
         self.magnet_pol = magnet_pol
         self.magnet_det = magnet_det
 
-        self.gamma_HzToT = self.sample.gamma.convert_to("Hz/T")
+        self.gamma_HzToT = self.sample.gamma.convert_to("Hz/T").value
 
         self.station = station
 
@@ -600,12 +602,12 @@ class Simulation:
         self.init_M_phi = init_M_phi
 
         self.init_phase = init_phase
-        self.B0z_T = magnet_det.B0.convert_to("T")
-        self.simuRate_Hz = simuRate.convert_to("Hz")
+        self.B0z_T = magnet_det.B0.convert_to("T").value
+        self.simuRate_Hz = simuRate.convert_to("Hz").value
         self.timeStep_s = (
             1.0 / self.simuRate_Hz
         )  # the key parameter in setting simulation timing
-        self.duration_s = duration.convert_to("s")
+        self.duration_s = duration.convert_to("s").value
         self.timeStamp = (
             np.arange(int(self.duration_s * self.simuRate_Hz)) * self.timeStep_s
         )
@@ -615,7 +617,8 @@ class Simulation:
         self.excField: MagField = excField
         # self.simutimestep = self.simustep * self.ALPwind.cohT
         # self.simutimerate = 1.0 / self.simutimestep
-        self.demodFreq_Hz = demodFreq
+        self.demodFreq_Hz = self.LIA.demodFreq.value_in("Hz")
+        print(self.demodFreq_Hz)
         self.nuL_Hz = (
             abs(self.gamma_HzToT * self.B0z_T / (2 * np.pi)) - self.demodFreq_Hz
         )  # Larmor frequency
@@ -626,8 +629,8 @@ class Simulation:
         # check(abs(self.ALPwind.nu))
         # self.T2 = 1.0 * sample.T2
         # self.T1 = 1.0 * sample.T1
-        self.T2_s = sample.T2.convert_to("s")
-        self.T1_s = sample.T1.convert_to("s")
+        self.T2_s = sample.T2.convert_to("s").value
+        self.T1_s = sample.T1.convert_to("s").value
 
         if self.simuRate_Hz < 10 * abs(self.nuL_Hz):
             print("WARNING: self.simurate < 10*self.nu_rot")
@@ -645,7 +648,7 @@ class Simulation:
         # self.va = 300 * 1e3
 
         if verbose:
-            print(f"Larmor frequency: {self.B0z_T*self.sample.gamma/(2*np.pi):e} Hz")
+            # print(f"Larmor frequency: {self.B0z_T*self.sample.gamma.value_in("Hz/T")/(2*np.pi):e} Hz")
             # print(f"ALP compton frequency: {self.excField.nu:e} Hz")
             print(f"simulation rate: {self.simuRate_Hz:e} Hz")
 
@@ -857,7 +860,7 @@ class Simulation:
     #         self.excField.BALP
     #     )  # why? * (1 + self.ALPwind.Gamma * np.random.standard_cauchy(size=2 * self.numofALPparticle))
     #     ALP_nu = self.excField.nu * (1 + (self.ALP_B / self.excField.BALP * 1e-3) ** 2)
-    #     ALP_nu_rot = abs(ALP_nu) - abs(self.sample.gamma * self.B0z_T / (2 * np.pi))
+    #     ALP_nu_rot = abs(ALP_nu) - abs(self.sample.gamma.value_in("Hz/T") * self.B0z_T / (2 * np.pi))
     #     self.va = 220 * 1e3  # 220 km/s
     #     self.speedtova = maxwell.rvs(size=2 * self.numofALPparticle)
 
@@ -906,7 +909,7 @@ class Simulation:
     #         # plt.show()
 
     #     ALP_nu_rot_arr = self.nu_a_arr - abs(
-    #         self.sample.gamma * self.B0z_T / (2 * np.pi)
+    #         self.sample.gamma.value_in("Hz/T") * self.B0z_T / (2 * np.pi)
     #     )
     #     # plt.hist(ALP_B/self.ALPwind.BALP, bins=1000)
     #     # plt.show()
@@ -1030,15 +1033,15 @@ class Simulation:
     #     # if verbose:
     #     #     check(newphase_generation/looptime)
     #     self.timeStamp = np.arange(len(self.Bexc_t_vec)) * self.timeStep_s
-    #     check(self.excField.BALP * abs(self.sample.gamma))
+    #     check(self.excField.BALP * abs(self.sample.gamma.value_in("Hz/T")))
     #     # check(self.BALP_array[:, 0])
     #     self.BALPsq_arr = (
     #         self.Bexc_t_vec[:, 0] ** 2
     #         + self.Bexc_t_vec[:, 1] ** 2
     #         + self.Bexc_t_vec[:, 2] ** 2
     #     )
-    #     check(np.mean(np.sqrt(self.BALPsq_arr)) * abs(self.sample.gamma))
-    #     check(np.sqrt(np.mean(self.BALPsq_arr)) * abs(self.sample.gamma))
+    #     check(np.mean(np.sqrt(self.BALPsq_arr)) * abs(self.sample.gamma.value_in("Hz/T")))
+    #     check(np.sqrt(np.mean(self.BALPsq_arr)) * abs(self.sample.gamma.value_in("Hz/T")))
     #     if verbose:
     #         fig = plt.figure(figsize=(8 * 0.6, 6 * 0.6), dpi=150)  #
     #         gs = gridspec.GridSpec(nrows=1, ncols=1)  #
@@ -1335,32 +1338,32 @@ class Simulation:
     #         plt.tight_layout()
     #         plt.show()
 
-    def generatePulseExcitation(
-        self,
-        pulseDur: float = 100e-6,
-        tipAngle: float = np.pi / 2,
-        direction: np.ndarray = np.array([1, 0, 0]),
-        nu_rot: float = None,
-        showplt: bool = False,  # whether to plot B_ALP
-        plotrate: float = None,
-        verbose: bool = False,
-    ):
-        self.excType = "pulse"
-        B1 = 2 * tipAngle / (self.sample.gamma * pulseDur)
-        duty_func = partial(gate, start=0, stop=pulseDur)
-        if nu_rot is None:
-            nu_rot = self.excField.nu - self.demodFreq_Hz
-        self.excField.setXYPulse(
-            timeStamp=self.timeStamp,
-            B1=B1,  # amplitude of the excitation pulse in [T]
-            nu_rot=nu_rot,  # Hz
-            init_phase=0,
-            direction=direction,
-            duty_func=duty_func,
-            verbose=False,
-        )
+    # def generatePulseExcitation(
+    #     self,
+    #     pulseDur: float = 100e-6,
+    #     tipAngle: float = np.pi / 2,
+    #     direction: np.ndarray = np.array([1, 0, 0]),
+    #     nu_rot: float = None,
+    #     showplt: bool = False,  # whether to plot B_ALP
+    #     plotrate: float = None,
+    #     verbose: bool = False,
+    # ):
+    #     self.excType = "pulse"
+    #     B1 = 2 * tipAngle / (self.sample.gamma.value_in("Hz/T") * pulseDur)
+    #     duty_func = partial(gate, start=0, stop=pulseDur)
+    #     if nu_rot is None:
+    #         nu_rot = self.excField.nu - self.demodFreq_Hz
+    #     self.excField.setXYPulse(
+    #         timeStamp=self.timeStamp,
+    #         B1=B1,  # amplitude of the excitation pulse in [T]
+    #         nu_rot=nu_rot,  # Hz
+    #         init_phase=0,
+    #         direction=direction,
+    #         duty_func=duty_func,
+    #         verbose=False,
+    #     )
 
-        # check(duty_func(pulseDur / 2))
+    #     # check(duty_func(pulseDur / 2))
 
     # @nb.jit
     @nb.jit(
@@ -1378,7 +1381,7 @@ class Simulation:
         My,
         Mz,
         nu_rot,
-        gyroratio,
+        gamma,
         timeStep,
         M0inf,
         T2,
@@ -1393,20 +1396,20 @@ class Simulation:
                 0:3
             ]  # *np.cos(2*np.pi * nu_rot * (i) * timestep + BALP[-1])
             [dBxdt, dBydt, dBzdt] = dBdt[i][0:3]  #
-            dMxdt = gyroratio * (My * Bz - Mz * By) - Mx / T2
-            dMydt = gyroratio * (Mz * Bx - Mx * Bz) - My / T2
-            dMzdt = gyroratio * (Mx * By - My * Bx) - (Mz - M0inf) / T1
+            dMxdt = gamma * (My * Bz - Mz * By) - Mx / T2
+            dMydt = gamma * (Mz * Bx - Mx * Bz) - My / T2
+            dMzdt = gamma * (Mx * By - My * Bx) - (Mz - M0inf) / T1
 
             d2Mxdt2 = (
-                gyroratio * (dMydt * Bz + My * dBzdt - dMzdt * By - Mz * dBydt)
+                gamma * (dMydt * Bz + My * dBzdt - dMzdt * By - Mz * dBydt)
                 - dMxdt / T2
             )
             d2Mydt2 = (
-                gyroratio * (dMzdt * Bx + Mz * dBxdt - dMxdt * Bz - Mx * dBzdt)
+                gamma * (dMzdt * Bx + Mz * dBxdt - dMxdt * Bz - Mx * dBzdt)
                 - dMydt / T2
             )
             d2Mzdt2 = (
-                gyroratio * (dMxdt * By + Mx * dBydt - dMydt * Bx - My * dBxdt)
+                gamma * (dMxdt * By + Mx * dBydt - dMydt * Bx - My * dBxdt)
                 - dMzdt / T1
             )
 
@@ -1442,8 +1445,8 @@ class Simulation:
         self.trjry[0] = vecM0
         #
         timeStep = self.timeStep_s
-        gyroratio = self.sample.gamma
-        B0z_rot_amp = self.B0z_T - self.demodFreq_Hz / (self.sample.gamma / (2 * np.pi))
+        gamma = self.sample.gamma.value_in("Hz/T")
+        B0z_rot_amp = self.B0z_T - self.demodFreq_Hz / (self.sample.gamma.value_in("Hz/T") / (2 * np.pi))
         B0z_rot = B0z_rot_amp * np.ones(len(self.excField.B_vec))
         B0_rot = np.outer(B0z_rot, np.array([0, 0, 1]))
         if usenumba:
@@ -1470,7 +1473,7 @@ class Simulation:
                 My=My,
                 Mz=Mz,
                 nu_rot=self.nuL_Hz,
-                gyroratio=self.sample.gamma,
+                gamma=self.sample.gamma.value_in("Hz/T"),
                 timeStep=self.timeStep_s,
                 M0inf=M0inf,
                 T2=self.T2_s,
@@ -1495,20 +1498,20 @@ class Simulation:
                     * self.nuL_Hz
                     * np.sin(2 * np.pi * self.nuL_Hz * (i) * timeStep + BALP[-1])
                 )
-                dMxdt = gyroratio * (My * Bz - Mz * By) - Mx / self.T2_s
-                dMydt = gyroratio * (Mz * Bx - Mx * Bz) - My / self.T2_s
-                dMzdt = gyroratio * (Mx * By - My * Bx) - (Mz - M0inf) / self.T1_s
+                dMxdt = gamma * (My * Bz - Mz * By) - Mx / self.T2_s
+                dMydt = gamma * (Mz * Bx - Mx * Bz) - My / self.T2_s
+                dMzdt = gamma * (Mx * By - My * Bx) - (Mz - M0inf) / self.T1_s
 
                 d2Mxdt2 = (
-                    gyroratio * (dMydt * Bz + My * dBzdt - dMzdt * By - Mz * dBydt)
+                    gamma * (dMydt * Bz + My * dBzdt - dMzdt * By - Mz * dBydt)
                     - dMxdt / self.T2_s
                 )
                 d2Mydt2 = (
-                    gyroratio * (dMzdt * Bx + Mz * dBxdt - dMxdt * Bz - Mx * dBzdt)
+                    gamma * (dMzdt * Bx + Mz * dBxdt - dMxdt * Bz - Mx * dBzdt)
                     - dMydt / self.T2_s
                 )
                 d2Mzdt2 = (
-                    gyroratio * (dMxdt * By + Mx * dBydt - dMydt * Bx - My * dBxdt)
+                    gamma * (dMxdt * By + Mx * dBydt - dMydt * Bx - My * dBxdt)
                     - dMzdt / self.T1_s
                 )
 
@@ -1849,7 +1852,7 @@ class Simulation:
         h5demod0 = h5f.create_group("NMRKineticSimu/demods/0")
         h5demod0.create_dataset(
             "demodfreq",
-            data=np.array([abs(self.sample.gamma * self.B0z_T / (2 * np.pi))]),
+            data=np.array([abs(self.sample.gamma.value_in("Hz/T") * self.B0z_T / (2 * np.pi))]),
         )
         h5demod0.create_dataset(
             "samprate", data=np.array([self.simuRate_Hz / (1.0 * saveintv)])
@@ -1881,7 +1884,7 @@ class Simulation:
 
         h5sample = h5f.create_group("Sample")
         h5sample.create_dataset("name", data=[self.sample.name])
-        h5sample.create_dataset("gyroratio", data=[self.sample.gamma])
+        h5sample.create_dataset("gyroratio", data=[self.sample.gamma.value_in("Hz/T")])
         h5sample.create_dataset("T1", data=np.array([self.T1_s]))
         h5sample.create_dataset("T2", data=np.array([self.T2_s]))
         h5sample.create_dataset("pol", data=[self.sample.pol])

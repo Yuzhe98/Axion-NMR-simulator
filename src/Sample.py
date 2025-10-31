@@ -1,7 +1,7 @@
 import numpy as np
 
 
-from Envelope import (
+from src.Envelope import (
     PhysicalQuantity,
     gamma_Xe129,
     gamma_p,

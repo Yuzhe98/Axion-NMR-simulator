@@ -1,18 +1,17 @@
 import os
-import sys
 
 print(os.path.abspath(os.curdir))
 import numpy as np
 from src.SimuTools import MagField, Simulation
 from src.Sample import Sample
 
-from src.Apparatus import SQUID, Magnet, CASPEr_LF, LockinAmplifier
+from src.Apparatus import Magnet, LockinAmplifier
 
 # from DataAnalysis import DualChanSig
 from src.functioncache import GiveDateandTime
 
 # from Envelope import ureg
-from src.Envelope import PhysicalQuantity, gamma_p, gamma_Xe129, mu_p, mu_Xe129
+from src.Envelope import PhysicalQuantity, gamma_p, mu_p
 
 # import matplotlib.pyplot as plt
 # import matplotlib.gridspec as gridspec

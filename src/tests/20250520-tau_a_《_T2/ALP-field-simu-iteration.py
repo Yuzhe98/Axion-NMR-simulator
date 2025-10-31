@@ -87,7 +87,7 @@ for i in range(num_runs):
         nu_a=nu_a,  # frequency in the rotating frame
         # direction: np.ndarray,  #  = np.array([1, 0, 0])
         use_stoch=use_stoch,
-        demodfreq=simu.demodFreq_Hz,
+        demodFreq=simu.demodFreq_Hz,
         # rand_seed=rand_seed,
         makeplot=False,
     )

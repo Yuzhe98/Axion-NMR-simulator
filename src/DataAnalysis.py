@@ -5,7 +5,7 @@
 import os
 
 
-from functioncache import (
+from src.functioncache import (
     check,
     record_runtime_YorN,
     Lorentzian,

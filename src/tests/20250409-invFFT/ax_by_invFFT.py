@@ -73,7 +73,7 @@ simu.excField.setALP_Field(
     nu_a=(-0.7),  # frequency in the rotating frame
     # direction: np.ndarray,  #  = np.array([1, 0, 0])
     use_stoch=True,
-    demodfreq=simu.demodFreq_Hz,
+    demodFreq=simu.demodFreq_Hz,
     makeplot=True,
 )
 simu.excType = "ALP"

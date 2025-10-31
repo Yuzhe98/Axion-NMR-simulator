@@ -5,9 +5,9 @@
 
 import numpy as np
 
-from Sample import Sample
+from src.Sample import Sample
 
-from Envelope import (
+from src.Envelope import (
     PhysicalQuantity,
     gamma_p,
     hbar,
@@ -103,8 +103,9 @@ class Magnet:
         self.lw_ppm = lw_ppm
 
 
-SCmagnet = Magnet(
+LFmagnet = Magnet(
     name=None,
+    B0=PhysicalQuantity(0.1, "T"),
     lw_ppm=PhysicalQuantity(10, "ppm"),
 )
 

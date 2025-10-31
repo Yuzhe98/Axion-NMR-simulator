@@ -98,7 +98,7 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
             nu_a=nu_a_offset,  # frequency in the rotating frame
             # direction: np.ndarray,  #  = np.array([1, 0, 0])
             use_stoch=use_stoch,
-            demodfreq=simu.demodFreq_Hz,
+            demodFreq=simu.demodFreq_Hz,
             # rand_seed=rand_seed,
             makeplot=False,
         )

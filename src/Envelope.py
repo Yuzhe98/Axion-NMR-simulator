@@ -272,6 +272,14 @@ class PhysicalQuantity:
             converted_quantity.magnitude, str(converted_quantity.units)
         )
 
+    def value_in(self, unit):
+        """
+        Convert the quantity to a new unit and return the value of the quantity.
+        :param unit: The new unit as a string
+        """
+        converted_quantity = self.quantity.to(unit)
+        return converted_quantity.magnitude
+
     def example(self):
         # Define physical quantities
         c = PhysicalQuantity(299792458, "m/s")  # Speed of light

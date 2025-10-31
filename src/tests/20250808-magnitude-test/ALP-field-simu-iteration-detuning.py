@@ -96,7 +96,7 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
             Bamp=Brms,  # RMS amplitude of the pseudo-magnetic field in [T]
             nu_a=nu_a_offset,  # frequency in the rotating frame
             use_stoch=use_stoch,
-            demodfreq=simu.demodFreq_Hz,
+            demodFreq=simu.demodFreq_Hz,
             # rand_seed=rand_seed,
             makeplot=False,
         )
