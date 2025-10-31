@@ -1,17 +1,18 @@
 import os
 import sys
 
+print(os.path.abspath(os.curdir))
 import numpy as np
-from SimuTools import MagField, Simulation
-from Sample import Sample
+from src.SimuTools import MagField, Simulation
+from src.Sample import Sample
 
-from Apparatus import SQUID, Magnet, CASPEr_LF, LockinAmplifier
+from src.Apparatus import SQUID, Magnet, CASPEr_LF, LockinAmplifier
 
 # from DataAnalysis import DualChanSig
-from functioncache import GiveDateandTime
+from src.functioncache import GiveDateandTime
 
 # from Envelope import ureg
-from Envelope import PhysicalQuantity, gamma_p, gamma_Xe129, mu_p, mu_Xe129
+from src.Envelope import PhysicalQuantity, gamma_p, gamma_Xe129, mu_p, mu_Xe129
 
 # import matplotlib.pyplot as plt
 # import matplotlib.gridspec as gridspec
@@ -19,19 +20,20 @@ from Envelope import PhysicalQuantity, gamma_p, gamma_Xe129, mu_p, mu_Xe129
 from tqdm import tqdm
 
 
-os.chdir("src")  # go to parent folder
-print(os.path.abspath(os.curdir))
-sys.path.insert(0, os.path.abspath(os.curdir))
+# os.chdir("src")  # go to parent folder
+# print(os.path.abspath(os.curdir))
+# sys.path.insert(0, os.path.abspath(os.curdir))
 
 
 num_runs = 1
 simuRate = PhysicalQuantity(500, "Hz")  #
 duration = PhysicalQuantity(100, "s")
 timeLen = int((simuRate * duration).convert_to("").value)
-# nu_a_offsets = np.arange(-10, 10, 0.5)
-nu_a_offsets = np.array(
-    [PhysicalQuantity(Delta_nu, "Hz") for Delta_nu in np.arange(-10, 10, 0.5)]
-)
+# nu_a_offsets = np.array(
+#     [PhysicalQuantity(Delta_nu, "Hz") for Delta_nu in np.arange(-10, 10, 0.5)]
+# )
+
+nu_a_offsets = np.array([PhysicalQuantity(Delta_nu, "Hz") for Delta_nu in [0.0]])
 
 results = np.empty(
     (num_runs, timeLen), dtype=np.float64
@@ -53,7 +55,7 @@ LIA = LockinAmplifier(
 # T1 = 1e9
 
 # CH3CH2OH
-ethanol = Sample(
+sample = Sample(
     name="Ethanol",  # name of the sample
     gamma=gamma_p,  # [Hz/T]. Remember input it with 2 * np.pi
     massDensity=PhysicalQuantity(0.78945, "g / cm**3 "),
@@ -68,6 +70,11 @@ ethanol = Sample(
     verbose=False,
 )
 
+magnet_det = Magnet(
+    name=None,
+    B0=LIA.demodFreq / (sample.gamma / (2 * np.pi)),
+    lw_ppm=PhysicalQuantity(10, "ppm"),
+)
 
 Brms = 1e-10
 nu_a = -0.7
@@ -84,14 +91,17 @@ ALP_Field_grad = MagField(
 
 simu = Simulation(
     name="simulation template",
-    sample=ethanol,  # class Sample
+    sample=sample,  # class Sample
+    pickup=None,
+    SQUID=None,
+    magnet_pol=None,
+    magnet_det=magnet_det,
+    LIA=LIA,
     init_time=0.0,  # [s]
     station=None,
     init_mag_amp=1.0,
     init_M_theta=0.0,  # [rad]
     init_M_phi=0.0,  # [rad]
-    demodFreq=demodFreq,
-    B0z=(1e6) / (ExampleSample10MHzT.gamma / (2 * np.pi)),  # [T]
     simuRate=simuRate,  #
     duration=duration,
     excField=ALP_Field_grad,
@@ -103,14 +113,15 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
         rand_seed = i
 
         # tic = time.perf_counter()
-        # check(simu.demodfreq)
         simu.excField.setALP_Field(
             method="inverse-FFT",
             timeStamp=simu.timeStamp,
+            simuRate=simu.simuRate_Hz,
+            duration=simu.duration_s,
             Bamp=Brms,  # RMS amplitude of the pseudo-magnetic field in [T]
-            nu_a=nu_a_offset,  # frequency in the rotating frame
+            nu_a=nu_a_offset.value_in("Hz"),  # frequency in the rotating frame
             use_stoch=use_stoch,
-            demodfreq=simu.demodFreq_Hz,
+            demodFreq=simu.demodFreq_Hz,
             # rand_seed=rand_seed,
             makeplot=False,
         )
@@ -123,7 +134,7 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
         # toc = time.perf_counter()
         # print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-        # simu.MonitorTrajectory(verbose=True)
+        simu.monitorTrajectory(verbose=True)
         # simu.VisualizeTrajectory3D(
         #     plotrate=1e3,  # [Hz]
         #     # rotframe=True,
