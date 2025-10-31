@@ -1,11 +1,11 @@
-import os
+# import os
 
-print(os.path.abspath(os.curdir))
 import numpy as np
 from src.SimuTools import MagField, Simulation
 from src.Sample import Sample
 
-from src.Apparatus import Magnet, LockinAmplifier
+# from src.Apparatus import Magnet, LockinAmplifier
+from src.Apparatus import SQUID, Pickup, Magnet, LockinAmplifier
 
 # from DataAnalysis import DualChanSig
 from src.functioncache import GiveDateandTime
@@ -26,7 +26,7 @@ from tqdm import tqdm
 
 num_runs = 1
 simuRate = PhysicalQuantity(500, "Hz")  #
-duration = PhysicalQuantity(100, "s")
+duration = PhysicalQuantity(1, "s")
 timeLen = int((simuRate * duration).convert_to("").value)
 # nu_a_offsets = np.array(
 #     [PhysicalQuantity(Delta_nu, "Hz") for Delta_nu in np.arange(-10, 10, 0.5)]
@@ -39,13 +39,34 @@ results = np.empty(
 )  # or float, depending on your data
 
 
-demodFreq = 1e6
+C649_O12 = SQUID(
+    name="C649_O12 in Nb capsule S219, channel 2",
+    Lin=PhysicalQuantity(400, "nH"),  # inoput coil inductance
+    Min=PhysicalQuantity(1 / 0.525, "Phi_0/microA"),  # mutual inductance
+    Mf=PhysicalQuantity(1 / 44.16, "Phi_0/microA"),
+    Rf=PhysicalQuantity(3, "kiloohm"),
+    attenuation=None,
+)
+
+
+gradiometer = Pickup(
+    name="(old) gradiometer on PEEK",
+    Lcoil=PhysicalQuantity(400, "nH"),
+    gV=PhysicalQuantity(37.0, "1/m"),  # sample-to-pickup coupling strength
+    # assume cylindrical sample (R=4 mm, H=22.53 mm) coupling to the gradiometer
+    vol=PhysicalQuantity(np.pi * 14**2 * 22.53, "mm**3"),
+)
+
+
+Halbach = Magnet(name=None, lw=None, B0=PhysicalQuantity(1.0, "T"))
+
+
 LIA = LockinAmplifier(
     name="virtual LIA",
     demodFreq=PhysicalQuantity(1.0, "MHz"),
-    sampRate=None,
-    DTRC_Tc=None,
-    DTRC_order=None,
+    sampRate=simuRate,
+    DTRC_TC=PhysicalQuantity(1.0, "s"),
+    DTRC_order=PhysicalQuantity(0, ""),
     verbose=False,
 )
 
@@ -59,7 +80,7 @@ sample = Sample(
     gamma=gamma_p,  # [Hz/T]. Remember input it with 2 * np.pi
     massDensity=PhysicalQuantity(0.78945, "g / cm**3 "),
     molarMass=PhysicalQuantity(46.069, "g / mol"),  # molar mass
-    numOfSpinsPerMolecule=6,  # number of spins per molecule
+    numOfSpinsPerMolecule=PhysicalQuantity(6, ""),  # number of spins per molecule
     T2=PhysicalQuantity(1, "s"),  #
     T1=PhysicalQuantity(5, "s"),  #
     vol=PhysicalQuantity(1, "cm**3"),
@@ -70,16 +91,17 @@ sample = Sample(
 )
 
 magnet_det = Magnet(
-    name=None,
+    name="detection magnet",
     B0=LIA.demodFreq / (sample.gamma / (2 * np.pi)),
-    lw_ppm=PhysicalQuantity(10, "ppm"),
+    lw=PhysicalQuantity(10, "ppm"),
 )
+
 
 Brms = 1e-10
 nu_a = -0.7
 use_stoch = True
 
-savedir = r"src\tests\20251031-template-for-simulations\data/"
+savedir = r"src\tests\20251031-template-for-simulations/"
 timestr = GiveDateandTime()
 
 
@@ -91,11 +113,12 @@ ALP_Field_grad = MagField(
 simu = Simulation(
     name="simulation template",
     sample=sample,  # class Sample
-    pickup=None,
-    SQUID=None,
+    pickup=gradiometer,
+    SQUID=C649_O12,
     magnet_pol=None,
     magnet_det=magnet_det,
     LIA=LIA,
+    # 
     init_time=0.0,  # [s]
     station=None,
     init_mag_amp=1.0,
@@ -133,7 +156,7 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
         # toc = time.perf_counter()
         # print(f"GenerateTrajectory time consumption = {toc-tic:.3f} s")
 
-        simu.monitorTrajectory(verbose=True)
+        # simu.monitorTrajectory(verbose=True)
         # simu.VisualizeTrajectory3D(
         #     plotrate=1e3,  # [Hz]
         #     # rotframe=True,
@@ -150,14 +173,15 @@ for j, nu_a_offset in enumerate((nu_a_offsets)):
         # simu.compareBandSig()
 
         # normalized magnetization
-        sin_theta = np.sqrt(simu.trjry[0:-1, 0] ** 2 + simu.trjry[0:-1, 1] ** 2)
+        # sin_theta = np.sqrt(simu.trjry[0:-1, 0] ** 2 + simu.trjry[0:-1, 1] ** 2)
 
         # theta = run_simulation(rand_seed)
-        results[i] = sin_theta
+        # results[i] = sin_theta
         # np.save(f"theta_run_{i}.npy", theta)
+        simu.saveToFile_h5(pathAndName=savedir + "test_save")
 
     #
-    data_file_name = savedir + "theta_all_runs_" + timestr + f"_{j}.npz"
+    # data_file_name = savedir + "theta_all_runs_" + timestr + f"_{j}.npz"
     # np.savez(
     #     data_file_name,
     #     timeStamp=simu.timeStamp,
