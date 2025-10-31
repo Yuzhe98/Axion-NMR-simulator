@@ -242,7 +242,6 @@ class PhysicalQuantity:
             result = ufunc(*dimless_magnitudes)
             return PhysicalQuantity(result, "")  # Result is dimensionless
 
-
         elif ufunc in (np.add, np.subtract):
             # For add/subtract, units must match
             if len(units) > 1:
@@ -312,7 +311,7 @@ class PhysicalQuantity:
 e = PhysicalQuantity(-1.602176634e-19, "coulomb")
 
 # mol to number by Avogadro's number
-mol_to_N = PhysicalQuantity(6e23, "mol**(-1)")
+mol_to_num = PhysicalQuantity(6e23, "mol**(-1)")
 
 # Constants
 
@@ -324,10 +323,9 @@ c = PhysicalQuantity(1, "c")
 u = PhysicalQuantity(931.49410242, "MeV / c**2")
 
 # Boltzmann constant in eV K^-1
-k = PhysicalQuantity(8.617333262145e-5, "eV / kelvin")
-
+kB = PhysicalQuantity(8.617333262145e-5, "eV / kelvin")
 # Boltzmann constant in J K^-1
-kB = PhysicalQuantity(1.380649e-23, "joule / kelvin")
+# kB = PhysicalQuantity(1.380649e-23, "joule / kelvin")
 
 # Planck constant
 h_Planck = PhysicalQuantity(4.135667696e-15, "eV * s")
@@ -391,7 +389,6 @@ if __name__ == "__main__":
     print("np.cos(x)   =", np.cos(x))
     print("np.sinh(x)  =", np.sinh(x))
     print("np.cosh(x)  =", np.cosh(x))
-    
 
     # Arithmetic examples with units
     a = PhysicalQuantity(3.0, "m")
@@ -404,7 +401,12 @@ if __name__ == "__main__":
     print("np.divide(a, c)   =", np.divide(a, c))  # m/s
 
     # print(abs(gamma_Xe129))
-    qu = hbar * gamma_p * PhysicalQuantity(100, "tesla") / (2 * k * PhysicalQuantity(.002, "K"))
+    qu = (
+        hbar
+        * gamma_p
+        * PhysicalQuantity(100, "tesla")
+        / (2 * kB * PhysicalQuantity(0.002, "K"))
+    )
     print(qu.convert_to(""))
     pol = np.tanh(qu)
     print(pol)

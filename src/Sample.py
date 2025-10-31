@@ -1,7 +1,16 @@
 import numpy as np
 
 
-from Envelope import PhysicalQuantity, gamma_Xe129, gamma_p, mu_p, mu_Xe129, hbar, k
+from Envelope import (
+    PhysicalQuantity,
+    gamma_Xe129,
+    gamma_p,
+    mu_p,
+    mu_Xe129,
+    hbar,
+    kB,
+    mol_to_num,
+)
 
 
 class Sample:
@@ -27,7 +36,7 @@ class Sample:
         # spindenisty_gas=None,  # [g/cm^3] at STP
         # spindenisty_solid=None,  # [mol/cm^3]
         # shareofpeaks=None,  # array or list.
-        # temp: PhysicalQuantity = None,
+        temp: PhysicalQuantity = None,
         verbose: bool = False,
     ):
         """
@@ -60,16 +69,17 @@ class Sample:
 
         assert self.molarMass is not None
         self.spinNumDensity = (
-            self.numOfSpinsPerMolecule * self.massDensity / self.molarMass
+            self.numOfSpinsPerMolecule * self.massDensity / self.molarMass * mol_to_num
         ).convert_to("cm**(-3)")
 
         self.T2 = T2
         self.T1 = T1
         self.vol = vol
 
-        self.totalNumOfSpins = (self.numOfSpinsPerMolecule * self.vol).convert_to("")
+        self.totalNumOfSpins = (self.spinNumDensity * self.vol).convert_to("")
 
         self.mu = mu
+        self.temp = temp
 
     def getThermalPol(
         self,
@@ -80,7 +90,7 @@ class Sample:
         return thermal polarization
         """
         # pol = hbar * self.gamma * B_pol / (2 * k * temp)  # approximate
-        pol = np.tanh(hbar * self.gamma * B_pol / (2 * k * temp))  # exact
+        pol = np.tanh(hbar * self.gamma * B_pol / (2 * kB * temp))  # exact
         pol = pol.convert_to("")
         # check(pol)
         return pol
@@ -104,8 +114,8 @@ liquid_Xe129 = Sample(
     molarMass=PhysicalQuantity(131.29, "g / mol"),  # molar mass [g/mol]
     numOfSpinsPerMolecule=1,  # number of spins per molecule
     T2=PhysicalQuantity(1000, "s"),  #
-    T1=None,  #
-    vol=None,
+    T1=PhysicalQuantity(5000, "s"),  #
+    vol=PhysicalQuantity(1, "cm**3"),
     mu=mu_Xe129,  # magnetic dipole moment
     verbose=False,
 )
@@ -115,11 +125,11 @@ methanol = Sample(
     name="C-12 Methanol",  # name of the sample
     gamma=gamma_p,  # [Hz/T]. Remember input it with 2 * np.pi
     massDensity=PhysicalQuantity(0.792, "g / cm**3 "),
-    molmassMethanol=PhysicalQuantity(32.04, "g / mol"),  # molar mass
+    molarMass=PhysicalQuantity(32.04, "g / mol"),  # molar mass
     numOfSpinsPerMolecule=4,  # number of spins per molecule
-    T2=None,  #
-    T1=None,  #
-    vol=None,
+    T2=PhysicalQuantity(1, "s"),  #
+    T1=PhysicalQuantity(5, "s"),  #
+    vol=PhysicalQuantity(1, "cm**3"),
     mu=mu_p,  # magnetic dipole moment
     # boilpt=337.8,  # [K]
     # meltpt=175.6,  # [K]
@@ -131,11 +141,11 @@ ethanol = Sample(
     name="Ethanol",  # name of the sample
     gamma=gamma_p,  # [Hz/T]. Remember input it with 2 * np.pi
     massDensity=PhysicalQuantity(0.78945, "g / cm**3 "),
-    molmassMethanol=PhysicalQuantity(46.069, "g / mol"),  # molar mass
+    molarMass=PhysicalQuantity(46.069, "g / mol"),  # molar mass
     numOfSpinsPerMolecule=6,  # number of spins per molecule
-    T2=None,  #
-    T1=None,  #
-    vol=None,
+    T2=PhysicalQuantity(1, "s"),  #
+    T1=PhysicalQuantity(5, "s"),  #
+    vol=PhysicalQuantity(1, "cm**3"),
     mu=mu_p,  # magnetic dipole moment
     # boilpt=351.38,  # [K]
     # meltpt=159.01,  # [K]
